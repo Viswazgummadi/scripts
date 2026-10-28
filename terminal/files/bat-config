@@ -1,0 +1,26 @@
+# bat config. Used for read-only viewing of source files: S / O in ~/.zshrc, man pages, diff.
+
+--theme="TwoDark"
+
+# Show line numbers + a left rule + git modification markers.
+# (Overridden by BAT_STYLE if that env var is set — see ~/.zshrc.)
+--style="numbers,changes,header"
+
+# Wrap long lines instead of truncating.
+--wrap=auto
+
+# Treat these compiler-project extensions as the right language.
+--map-syntax="*.cu:C++"
+--map-syntax="*.cuh:C++"
+--map-syntax="*.cl:C"
+--map-syntax="*.inc:C++"
+--map-syntax="*.def:C++"
+--map-syntax="*.td:C++"
+--map-syntax="*.h.inc:C++"
+
+# Long files page; short ones just print. Keep colors, smart-case search.
+--pager="less -FRXi"
+
+# Italics (truecolor terminal), 4-wide tabs.
+--italic-text=always
+--tabs=4

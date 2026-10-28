@@ -1,0 +1,17 @@
+# ~/.zshrc.local — per-machine / per-project zsh settings. Sourced by ~/.zshrc, never committed.
+# Copy to ~/.zshrc.local and keep only what this machine needs.
+
+# --- tools installed in an unusual place (e.g. a user-local conda env when there is no sudo)
+# [[ -d $HOME/.conda/envs/zshenv/bin ]] && path=($HOME/.conda/envs/zshenv/bin $path)
+
+# --- git identity through the environment (shared account: leave ~/.gitconfig untouched)
+# export GIT_AUTHOR_NAME="Your Name"       GIT_COMMITTER_NAME="Your Name"
+# export GIT_AUTHOR_EMAIL="you@example.com" GIT_COMMITTER_EMAIL="you@example.com"
+
+# --- a project's environment (vishwa workspace)
+# [ -f "$HOME/vishwa/env/env.sh" ] && . "$HOME/vishwa/env/env.sh"
+# setopt SH_WORD_SPLIT   # bash-style splitting of unquoted $VARS, so  clang $CF k.cu  works
+
+# --- libraries / tool paths
+# export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"
+# path=("$HOME/some-project/build/bin" $path)

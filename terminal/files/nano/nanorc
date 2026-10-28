@@ -1,0 +1,15 @@
+## Personal nano config.
+
+## Syntax highlighting: every definition nano ships (modern nano's include takes globs)
+include "/usr/share/nano/*.nanorc"
+
+## Custom: LLVM .def (x-macro) and .td (TableGen)
+include "~/.config/nano/llvm.nanorc"
+
+## Quality-of-life
+set tabsize 4
+
+## Ctrl+S to save. nano >= 9 binds this by default already; the explicit
+## bind below is just documentation of what's active (needs `stty -ixon`
+## in ~/.zshrc / ~/.bashrc too, or the terminal eats Ctrl+S before nano sees it).
+bind ^S savefile main

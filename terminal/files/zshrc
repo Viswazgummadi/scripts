@@ -1,0 +1,325 @@
+
+# ~/.zshrc — portable terminal setup, installed by terminal/setup.sh of the scripts repo (edit it there).
+# Machine/project-specific settings go in ~/.zshrc.local (sourced below). Shared accounts: zsh need
+# not be the login shell; nothing here touches ~/.bashrc or ~/.bash_profile.
+
+# ------------------------------------------------------------------ PATH
+typeset -U path                             # keep `path` (and PATH) deduped
+path=($HOME/bin $HOME/.local/bin /usr/local/bin $path)
+export PATH
+
+# ------------------------------------------------------------------ oh-my-zsh
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME=bira; (( $+commands[starship] )) && ZSH_THEME=""   # starship draws the prompt when installed (see end of file)
+
+# Add wisely, as too many plugins slow down shell startup.
+# zsh-syntax-highlighting MUST stay last.
+plugins=(
+  git                       # g* aliases (g itself is overridden below)
+  z                         # `z libclc` — jump to a dir by frecency
+  extract                   # `extract foo.tar.zst` — any archive, one command
+  dirhistory                # Alt-Left / Alt-Right = cd back / forward
+  dirpersist                # remember the pushd stack across sessions
+  fancy-ctrl-z              # Ctrl-Z again foregrounds the last job
+  colored-man-pages
+  command-not-found
+  jsontools                 # pp_json / is_json / urlencode ...
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
+
+# zsh-completions goes on fpath, not in plugins (its README: loading it as a plugin breaks compinit caching)
+fpath+=${ZSH_CUSTOM:-$ZSH/custom}/plugins/zsh-completions/src
+
+source "$ZSH/oh-my-zsh.sh"
+
+# =================================================================
+#  Everything below runs AFTER oh-my-zsh so it wins any conflict.
+# =================================================================
+
+export EDITOR=nano
+export VISUAL=nano
+
+# Free up Ctrl+S (stop XON/XOFF flow control) so it reaches nano as a save key
+# instead of freezing the terminal.
+stty -ixon 2>/dev/null
+
+# ------------------------------------------------------------------ machine-specific
+# Per-machine / per-project settings (PATH additions, git identity, project env, `setopt SH_WORD_SPLIT` ...)
+# belong in ~/.zshrc.local, which is never committed. Template: terminal/files/zshrc.local.example.
+[[ -r $HOME/.zshrc.local ]] && source $HOME/.zshrc.local
+if [[ -n $WSL_DISTRO_NAME ]]; then
+  open() { explorer.exe "${1:-.}"; true; }   # explorer.exe exits 1 even on success
+fi
+export PATH
+
+# ------------------------------------------------------------------ history
+HISTFILE=~/.zsh_history
+HISTSIZE=200000
+SAVEHIST=200000
+setopt SHARE_HISTORY          # every terminal reads/writes the same history live
+setopt INC_APPEND_HISTORY
+setopt EXTENDED_HISTORY       # record timestamp + duration
+setopt HIST_IGNORE_ALL_DUPS   # only keep the most recent copy of a command
+setopt HIST_FIND_NO_DUPS      # don't show dupes when cycling through Ctrl-R
+setopt HIST_IGNORE_SPACE      # a leading space keeps a command out of history
+setopt HIST_REDUCE_BLANKS
+
+# ------------------------------------------------------------------ navigation
+setopt AUTO_CD               # a bare path (no `cd`) == cd there
+setopt AUTO_PUSHD            # every cd goes on the stack; `cd -<TAB>` to pick
+setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_SILENT
+unsetopt EXTENDED_GLOB       # off: it makes '#' special, so `clang -###` died with "bad pattern"
+
+# ------------------------------------------------------------------ completion
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'   # case-insensitive
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*:descriptions' format '%F{yellow}-- %d --%f'
+zstyle ':completion:*' group-name ''
+setopt COMPLETE_IN_WORD
+setopt AUTO_MENU
+
+# ------------------------------------------------------------------ keybindings
+# Type a prefix, press Up/Down to walk only the matching history lines.
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+bindkey '^[[A' up-line-or-beginning-search
+bindkey '^[[B' down-line-or-beginning-search
+[[ -n "${terminfo[kcuu1]}" ]] && bindkey "${terminfo[kcuu1]}" up-line-or-beginning-search
+[[ -n "${terminfo[kcud1]}" ]] && bindkey "${terminfo[kcud1]}" down-line-or-beginning-search
+
+# Ctrl-X Ctrl-E: edit the current command line in nano (long multi-line commands)
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey '^X^E' edit-command-line
+
+# ------------------------------------------------------------------ fzf / bat / delta
+# Ctrl-R fuzzy history, Ctrl-T files, Alt-C cd; fd for listing (hidden, no .git), bat for previews
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND='fd --type d --hidden --exclude .git'
+export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border --preview-window=right,60%'
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:200 {} 2>/dev/null || ls -la {}'"
+if (( $+commands[fzf] )); then
+  if fzf --zsh &>/dev/null; then   # fzf >= 0.48
+    source <(fzf --zsh)
+  else                             # older fzf (e.g. 0.35) ships the scripts as files
+    for f in ~/.fzf-{key-bindings,completion}.zsh(N) \
+             ${commands[fzf]:A:h:h}/share/{fzf/shell,doc/fzf/examples}/{key-bindings,completion}.zsh(N); do
+      source $f
+    done
+  fi
+fi
+
+# viewing source: line numbers + git-change bar + filename header.
+# set to 'plain' for a copy-paste-friendly bare dump.
+export BAT_STYLE=numbers,changes,header
+
+# cat -> bat on a terminal (glow for .md). Only when stdout is a tty and every argument is a plain file;
+# flags (cat -n), stdin, pipes, redirects and scripts all get the real cat.
+# \cat f  or  command cat f  = real cat for one call.
+cat() {
+  if [[ -t 1 ]] && (( $+commands[bat] && $# )); then
+    local a
+    for a in "$@"; do
+      [[ $a == -* || ! -f $a ]] && { command cat "$@"; return; }
+    done
+    local f w=${COLUMNS:-$(tput cols)}   # markdown: wrap to the current terminal width
+    for f in "$@"; do
+      if [[ ${f:l} == *.(md|markdown) ]] && (( $+commands[glow] )); then glow -s dark -w $w "$f"
+      else bat --paging=never "$f"; fi
+    done
+    return
+  fi
+  command cat "$@"
+}
+
+# ls -> eza (colors, git status, dirs first). \ls = real ls.
+if (( $+commands[eza] )); then
+  alias ls='eza --group-directories-first'
+  alias ll='eza -l --git --group-directories-first --time-style=relative'
+  alias la='eza -la --git --group-directories-first --time-style=relative'
+  alias lt='eza --tree --level=2 --git-ignore'
+fi
+
+# man pages highlighted by bat (bat config: ~/.config/bat/config)
+if (( $+commands[bat] )); then
+  export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+  export MANROFFOPT="-c"
+fi
+
+# git uses delta as its pager — via env so a shared ~/.gitconfig is untouched
+# (GIT_PAGER also works on very old gits that lack GIT_CONFIG_COUNT).
+(( $+commands[delta] )) && export GIT_PAGER='delta'
+export DELTA_PAGER='less -RFX'   # quit if it fits on one screen, keep colors
+
+# Colorful diff on a terminal: side-by-side through delta (else bat); piped/redirected use is unchanged.
+# Use `command diff ...` or `\diff ...` for the original plain output.
+diff() {
+  if [[ -t 1 ]] && (( $+commands[delta] )); then
+    command diff -u "$@" | delta --side-by-side --paging=never; return $pipestatus[1]
+  elif [[ -t 1 ]] && (( $+commands[bat] )); then
+    command diff "$@" | bat --paging=never -p -l diff; return $pipestatus[1]
+  fi
+  command diff "$@"
+}
+
+# ------------------------------------------------------------------ helper guide
+# `tool` (or tool -h / tool --help) prints the guide for all of them.
+typeset -gA __HELP
+__HELP[F]='F <str> [path...]                 find files/dirs whose PATH contains <str>
+    literal, case-insensitive, includes hidden files, skips .git
+    F wrapper                         every path containing "wrapper"
+    F .cu docs/                       only look under docs/
+    F tests/cuda/fill_kernel          a "/" in <str> matches across directories'
+__HELP[G]='G <str> [path...]                 every LINE containing <str>, as file:line:text
+    literal, case-insensitive, includes hidden files, skips .git
+    G cudaMalloc                      search the current directory
+    G "exp(" clang/lib/Headers        search one directory (or file)
+    paste a result into O to see its surroundings'
+__HELP[S]='S <start> <count> <file>          print <count> lines starting at line <start>
+    S 30 50 foo.cu                    lines 30 to 79
+    BAT_STYLE=plain S 30 50 foo.cu    no line numbers, for copy-paste'
+__HELP[O]='O <file>:<line>[:text] [radius]   lines around <line>, target highlighted (radius 15)
+    O src/foo.cpp:212                 lines 197 to 227
+    O src/foo.cpp:212 5               tighter window
+    O "<paste a G result>"            file:line:text from G works as is'
+__HELP[C]='C <str> <file> [n]                every match of <str> in one file, n lines of context (3)
+    literal, case-insensitive; match lines show N:, context lines N-
+    C cudaMalloc main.cu 5'
+__HELP[keys]='Ctrl-R                            fuzzy search shell history
+Ctrl-T                            fuzzy pick a file, pasted at the cursor (bat preview)
+Alt-C                             fuzzy cd into a subdirectory
+Up / Down                         after typing a prefix: only history lines starting with it
+→ (right arrow)                   accept the grey autosuggestion
+Ctrl-X Ctrl-E                     edit the current command line in nano
+Ctrl-Z  (twice)                   suspend, then bring the job back
+Alt-Left / Alt-Right              cd back / forward'
+__HELP[extra]='lowercase f g s o c               same as F G S O C
+z <part of dir>                   jump to a directory you visited before
+<dir>                             a bare directory name cds there; cd -<TAB> picks from the stack
+extract <archive>                 unpack any archive (tar.gz, zst, zip, 7z ...)
+pp_json < file.json               pretty-print JSON
+LoOkUp                            commands work in any case when the exact name is not found
+diff a b                          side-by-side via delta on a terminal, plain when piped
+git log / git diff                paged through delta
+cat <file...>                     bat on a terminal (\\cat = real cat; pipes/flags untouched)
+man <cmd>                         man pages highlighted by bat
+open <path>                       (WSL only) open in Windows explorer / default app
+colors through a pager            G foo --color=always | less     (F too)
+bat settings / file types         ~/.config/bat/config'
+
+__help() {   # __help [name]   one helper's guide, or all of them
+  local out n
+  if [[ -n $1 ]]; then
+    out=$__HELP[$1]
+  else
+    out='my shell tools        (tool / tool -h shows this)'
+    for n in F G S O C keys extra; do out+=$'\n\n'$__HELP[$n]; done
+  fi
+  if [[ -t 1 ]] && (( $+commands[bat] )); then
+    print -r -- "$out" | bat --paging=never -p -l help
+  else
+    print -r -- "$out"
+  fi
+}
+tool() { __help; }   # tool, tool -h, tool --help: all the same guide
+
+# ------------------------------------------------------------------ search helpers
+# F <str> [path...]   find files/dirs whose path contains <str>
+# fd matches only the file name unless --full-path is given, so a <str> with a
+# "/" in it (tests/cuda/fill_kernel) needs --full-path to match at all.
+F() {
+  local -a full
+  [[ $1 == */* ]] && full=(--full-path)
+  fd --hidden --exclude .git --fixed-strings --ignore-case $full -- "$@"
+}
+
+# G <str> [path...]   show file:line:text for every line containing <str>
+G() { rg --hidden --glob '!.git' --fixed-strings --ignore-case --line-number -- "$@"; }
+
+# lowercase spellings of the two search helpers. Explicit because oh-my-zsh's
+# git plugin already claims the alias `g` (=git) — a plain miss-handler can't win
+# against an existing alias, so override it here.
+unalias f g 2>/dev/null
+f() { F "$@"; }
+g() { G "$@"; }
+
+# ------------------------------------------------------------------ view helpers
+# __show_lines <file> <from> <to> [mark]   numbered lines from..to, line <mark> highlighted.
+# Uses bat when installed (BAT_STYLE=plain for copy-paste output), else awk. Never pages.
+__show_lines() {
+  if (( $+commands[bat] )); then
+    bat --paging=never --decorations=always --style=${BAT_STYLE:-numbers} --line-range "$2:$3" ${4:+--highlight-line=$4} -- "$1"
+  else
+    awk -v a="$2" -v b="$3" -v h="${4:-0}" -v tty="$([[ -t 1 ]] && print 1 || print 0)" '
+      NR > b { exit }
+      NR >= a {
+        if (NR == h && tty) printf "\033[7m%6d> %s\033[0m\n", NR, $0
+        else printf "%6d%s %s\n", NR, (NR == h ? ">" : " "), $0
+      }' "$1"
+  fi
+}
+
+# S <start> <count> <file>   print <count> lines starting at line <start> (inclusive)
+S() {
+  (( $# == 3 )) && [[ $1 == <-> && $2 == <-> && -f $3 ]] && (( $1 >= 1 && $2 >= 1 )) ||
+    { print -u2 "usage: S <start> <count> <file>     (tool: full guide)"; return 1; }
+  __show_lines "$3" $1 $(( $1 + $2 - 1 ))
+}
+
+# O <file>:<line>[:text] [radius]   lines around <line> (default 15 each side), target highlighted.
+# Takes G's output directly: G kernel_launch  ->  O src/foo.cpp:212
+O() {
+  local -a p; p=("${(@s/:/)1}")
+  local i f file line r=${2:-15}
+  for (( i = 1; i < $#p; i++ )); do   # shortest prefix that is a file followed by :<number>
+    f=${(j/:/)p[1,i]}
+    if [[ -f $f && $p[i+1] == <-> ]]; then file=$f; line=$p[i+1]; break; fi
+  done
+  [[ -n $file && $r == <-> ]] || { print -u2 "usage: O <file>:<line>[:text] [radius]     (tool: full guide)"; return 1; }
+  __show_lines "$file" $(( line > r ? line - r : 1 )) $(( line + r )) $line
+}
+
+# C <str> <file> [n]   every match of <str> in one file with n lines of context (default 3)
+#                      literal, case-insensitive like G; match lines N:, context lines N-
+C() {
+  (( $# >= 2 )) && [[ -f $2 && ${3:-3} == <-> ]] || { print -u2 "usage: C <str> <file> [context]     (tool: full guide)"; return 1; }
+  rg --fixed-strings --ignore-case --line-number --context "${3:-3}" -- "$1" "$2"
+}
+
+s() { S "$@"; }
+o() { O "$@"; }
+c() { C "$@"; }
+
+# ------------------------------------------------------------------ case-insensitive commands
+# If a typed command isn't found, retry it against functions / aliases / PATH
+# executables ignoring case, so any-case spellings like `LoOkUp` == `lookup` work.
+# Only fires on a miss, so normal command dispatch is untouched.
+if (( $+functions[command_not_found_handler] )); then
+  functions[__cnf_prev]=$functions[command_not_found_handler]
+fi
+command_not_found_handler() {
+  emulate -L zsh -o extended_glob
+  local cmd=$1; shift
+  local -a m
+  m=( "${(@k)functions[(I)(#i)$cmd]}" "${(@k)aliases[(I)(#i)$cmd]}" "${(@k)builtins[(I)(#i)$cmd]}" )
+  (( $#m )) || m=( "${(@k)commands[(I)(#i)$cmd]}" )
+  if (( $#m )); then
+    "${m[1]}" "$@"
+    return $?
+  fi
+  if (( $+functions[__cnf_prev] )); then
+    __cnf_prev "$cmd" "$@"
+    return $?
+  fi
+  print -u2 "zsh: command not found: $cmd"
+  return 127
+}
+
+# ------------------------------------------------------------------ prompt
+# starship prompt (config: ~/.config/starship.toml). Back to oh-my-zsh: set ZSH_THEME="bira" and drop this.
+(( $+commands[starship] )) && eval "$(starship init zsh)"

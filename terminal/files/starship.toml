@@ -1,0 +1,44 @@
+# starship prompt — https://starship.rs/config/
+# Two lines: info on top, input on its own line so long paths never squeeze what you type.
+add_newline = true
+command_timeout = 800   # ms; big repos on /mnt/c are slow, don't hang the prompt
+
+format = """
+$username$hostname$directory$git_branch$git_state$git_status$conda$python$c$cmake$cmd_duration$jobs
+$character"""
+
+[username]
+show_always = false          # only over ssh / as root
+format = '[$user]($style)@'
+
+[hostname]
+ssh_only = true
+format = '[$hostname]($style) '
+style = 'bold green'
+
+[directory]
+truncation_length = 4
+truncate_to_repo = false
+style = 'bold cyan'
+
+[git_branch]
+format = '[$symbol$branch]($style) '
+
+[git_status]
+format = '[$all_status$ahead_behind]($style) '
+
+[conda]
+format = '[$symbol$environment]($style) '
+ignore_base = true
+
+[python]
+format = '[$symbol($virtualenv )]($style)'
+detect_extensions = []       # only show when a venv is active, not for every .py dir
+
+[cmd_duration]
+min_time = 3000
+format = 'took [$duration]($style) '
+
+[character]
+success_symbol = '[❯](bold green)'
+error_symbol = '[❯](bold red)'

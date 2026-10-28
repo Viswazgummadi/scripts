@@ -1,0 +1,43 @@
+## Extra nano syntax definitions for LLVM-ish source (nano 2.3.1 compatible).
+
+## ---------------------------------------------------------------------------
+## .def  --  x-macro / preprocessor include files. Essentially C, so mirror
+##           the bundled c.nanorc rules.
+## ---------------------------------------------------------------------------
+syntax "def" "\.def$"
+color brightred "\<[A-Z_][0-9A-Z_]+\>"
+color green "\<(float|double|bool|char|int|short|long|sizeof|enum|void|static|const|struct|union|typedef|extern|(un)?signed|inline)\>"
+color green "\<((s?size)|((u_?)?int(8|16|32|64|ptr)))_t\>"
+color green "\<(class|namespace|template|public|protected|private|typename|this|friend|virtual|using|mutable|volatile|register|explicit)\>"
+color brightyellow "\<(for|if|while|do|else|case|default|switch)\>"
+color magenta "\<(goto|continue|break|return)\>"
+color brightcyan "^[[:space:]]*#[[:space:]]*(define|include(_next)?|(un|ifn?)def|endif|el(if|se)|if|warning|error|pragma)"
+color brightyellow ""(\\.|[^"])*""
+color brightblue "//.*"
+color brightblue start="/\*" end="\*/"
+color ,green "[[:space:]]+$"
+
+## ---------------------------------------------------------------------------
+## .td  --  LLVM TableGen
+## ---------------------------------------------------------------------------
+syntax "tablegen" "\.td$"
+## ALL_CAPS identifiers
+color brightred "\<[A-Z_][0-9A-Z_]+\>"
+## declaration / structural keywords
+color brightyellow "\<(class|def|defm|defset|defvar|multiclass|let|in|field|include|assert|dump)\>"
+color brightyellow "\<(if|then|else|foreach)\>"
+## built-in types
+color green "\<(bit|bits|int|string|list|dag|code|bag)\>"
+## bang operators:  !if !con !add !foreach !cast ...
+color magenta "!(con|add|sub|mul|div|and|or|xor|shl|sra|srl|not|eq|ne|le|lt|ge|gt|if|cond|foreach|filter|foldl|head|tail|empty|size|cast|isa|dag|setdagop|getdagop|subst|find|listconcat|listsplat|strconcat|interleave|range|tolower|toupper|repr)\>"
+## template-arg / paste operators
+color cyan "[#]"
+## numbers
+color brightmagenta "\<(0x[0-9A-Fa-f]+|[0-9]+)\>"
+## strings + [{ code blocks }]
+color brightyellow ""(\\.|[^"])*""
+color brightgreen start="\[\{" end="\}\]"
+## comments
+color brightblue "//.*"
+color brightblue start="/\*" end="\*/"
+color ,green "[[:space:]]+$"
