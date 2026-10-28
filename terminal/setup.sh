@@ -12,6 +12,7 @@
 #
 # Packages come from the system package manager (apt dnf yum pacman zypper apk brew) when sudo works;
 # anything still missing is fetched as a prebuilt binary into ~/.local/bin (no root needed).
+# Everything is COPIED into $HOME, so once it has run you can delete the clone: nothing points back at it.
 # Safe to re-run: existing files are moved to ~/.terminal-setup-backup/<time>/ first, never deleted.
 #
 # Options:
@@ -19,7 +20,8 @@
 #   --no-sudo         never use sudo (skip system packages; binaries go to ~/.local/bin)
 #   --user-local      install everything as binaries in ~/.local/bin, ignore system packages
 #   --no-packages     skip tool installation entirely, only deploy the configs
-#   --copy            copy config files instead of symlinking them to this repo
+#   --link            symlink the configs to this clone instead of copying (then do NOT delete the clone)
+#   --no-bashrc       do not add the "start zsh from bash" block to ~/.bashrc
 #   --chsh            also make zsh the login shell (off by default: shared accounts!)
 #   -h, --help        this text
 #
@@ -33,7 +35,7 @@ SRC=$HERE/files
 BIN=$HOME/.local/bin
 BACKUP=$HOME/.terminal-setup-backup/$(date +%Y%m%d-%H%M%S)
 
-DRY=0; NO_SUDO=0; USER_LOCAL=0; NO_PKGS=0; COPY=0; CHSH=0
+DRY=0; NO_SUDO=0; USER_LOCAL=0; NO_PKGS=0; COPY=1; CHSH=0; BASHRC=1
 for a in "$@"; do
   case $a in
     -n|--dry-run) DRY=1 ;;
@@ -41,6 +43,8 @@ for a in "$@"; do
     --user-local) USER_LOCAL=1; NO_SUDO=1 ;;
     --no-packages) NO_PKGS=1 ;;
     --copy) COPY=1 ;;
+    --link) COPY=0 ;;
+    --no-bashrc) BASHRC=0 ;;
     --chsh) CHSH=1 ;;
     -h|--help) sed -n '2,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $a (try --help)" >&2; exit 2 ;;
@@ -226,7 +230,7 @@ deploy_nanorc() {   # nano errors on an include with no match, so drop it where 
   ok "$dst"
 }
 deploy_configs() {
-  step "Config files ($([ $COPY = 1 ] && echo copied || echo "linked to $SRC"))"
+  step "Config files ($([ $COPY = 1 ] && echo "copied into \$HOME" || echo "symlinked to $SRC"))"
   deploy zshrc "$HOME/.zshrc"
   deploy starship.toml "$HOME/.config/starship.toml"
   deploy bat-config "$HOME/.config/bat/config"
@@ -261,6 +265,30 @@ EOF
   ok "$n delta setting(s) added"
 }
 
+setup_bashrc() {   # make an interactive bash hand over to zsh (guarded; `NO_ZSH=1 bash` skips it)
+  step "bash -> zsh"
+  local rc=$HOME/.bashrc mark="# >>> terminal-setup: start zsh >>>"
+  if [ $BASHRC = 0 ]; then ok "~/.bashrc untouched (--no-bashrc)"; return; fi
+  if ! have zsh && [ ! -x "$BIN/zsh" ]; then warn "zsh not installed, so ~/.bashrc was not changed"; return; fi
+  if [ -f "$rc" ] && grep -qF "$mark" "$rc"; then ok "~/.bashrc already starts zsh"; return; fi
+  if [ $DRY = 1 ]; then echo "  [dry-run] append the zsh start block to $rc"; return; fi
+  cat >> "$rc" <<'BLOCK'
+
+# >>> terminal-setup: start zsh >>>
+# Interactive bash hands over to zsh. Skip once with:  NO_ZSH=1 bash
+case $- in
+  *i*)
+    # only a real terminal session: never for `bash -ic 'cmd'`, scripts or tools that pipe into bash
+    if [ -z "${ZSH_VERSION:-}" ] && [ -z "${NO_ZSH:-}" ] && [ -z "${BASH_EXECUTION_STRING:-}" ] && [ -t 0 ] && [ -t 1 ]; then
+      PATH="$HOME/.local/bin:$PATH"
+      if command -v zsh >/dev/null 2>&1; then SHELL=$(command -v zsh); export SHELL; exec zsh; fi
+    fi ;;
+esac
+# <<< terminal-setup <<<
+BLOCK
+  ok "~/.bashrc now starts zsh (undo: delete the 'terminal-setup' block; one-off skip: NO_ZSH=1 bash)"
+}
+
 post_steps() {
   step "Finishing"
   have bat && do_ bat cache --build >/dev/null 2>&1
@@ -290,7 +318,7 @@ report() {
     if [ -z "$out" ]; then ok "zsh starts cleanly"; else warn "zsh printed output on startup:"; printf '%s\n' "$out" | head -5 | sed 's/^/      /'; fi
   fi
   if ! have zsh; then fail "zsh (install it with your package manager, or conda install -c conda-forge zsh)"; fi
-  if [ -n "$FAILED" ]; then printf '\n%sSome steps failed:%s%s\n' "$R" "$Z" "$FAILED"; else printf '\n%sDone.%s Start it with:  exec zsh   (backups, if any: %s)\n' "$G" "$Z" "$BACKUP"; fi
+  if [ -n "$FAILED" ]; then printf '\n%sSome steps failed:%s%s\n' "$R" "$Z" "$FAILED"; else printf '\n%sDone.%s Open a new terminal or run:  exec zsh\n  The configs were copied, so this clone can be deleted now.  (backups, if any: %s)\n' "$G" "$Z" "$BACKUP"; fi
 }
 
 [ $DRY = 1 ] && echo "(dry run: nothing will be changed)"
@@ -302,6 +330,7 @@ fi
 install_omz
 deploy_configs
 git_delta_config
+setup_bashrc
 post_steps
 report
 [ -z "$FAILED" ]
