@@ -8,6 +8,7 @@ include "~/.config/nano/llvm.nanorc"
 
 ## Quality-of-life
 set tabsize 4
+set constantshow
 
 ## Ctrl+S to save. nano >= 9 binds this by default already; the explicit
 ## bind below is just documentation of what's active (needs `stty -ixon`
