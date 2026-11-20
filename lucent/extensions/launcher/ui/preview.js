@@ -4,12 +4,13 @@
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import GdkPixbuf from 'gi://GdkPixbuf';
 import GObject from 'gi://GObject';
 import Pango from 'gi://Pango';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import {makeIcon, isImage, thumbnailFor} from './icons.js';
-import {roundCorners} from './glass.js';
+import {edgeFade, roundCorners} from './glass.js';
 import {tn} from '../core/gtype.js';
 import {fullDate, humanSize, readText, relTime, tildify} from '../core/util.js';
 import {define} from '../providers/web.js';
@@ -46,6 +47,7 @@ class Preview extends St.BoxLayout {
             overlay_scrollbars: true, x_expand: true, y_expand: true, style_class: 'sl-preview-scroll'});
         this._content = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true, style_class: 'sl-preview-content'});
         this._scroll.set_child(this._content);
+        edgeFade(this._scroll);
         this._hints = new St.BoxLayout({style_class: 'sl-hints', x_align: Clutter.ActorAlign.CENTER});
         this.add_child(this._scroll);
         this.add_child(this._hints);
@@ -107,6 +109,18 @@ class Preview extends St.BoxLayout {
     _image(path, {w = VIS_W, h = VIS_H} = {}) {
         const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
         const actor = St.TextureCache.get_default().load_file_async(Gio.File.new_for_path(path), w, h, scale, 1);
+        // The rounded corners belong on the picture, so the actor takes the picture's own shape;
+        // otherwise the picture sits letterboxed inside a rounded box and keeps square corners.
+        let iw = 0, ih = 0;
+        try {
+            [, iw, ih] = GdkPixbuf.Pixbuf.get_file_info(path);
+        } catch {
+            iw = ih = 0; // unreadable header: leave the size to the texture cache
+        }
+        if (iw > 0 && ih > 0) {
+            const s = Math.min(w / iw, h / ih, 1);
+            actor.set_size(Math.max(1, Math.round(iw * s)), Math.max(1, Math.round(ih * s)));
+        }
         const holder = new St.Widget({layout_manager: new Clutter.BinLayout(), x_align: Clutter.ActorAlign.CENTER});
         holder.add_child(actor);
         roundCorners(actor, 10);
@@ -151,11 +165,17 @@ class Preview extends St.BoxLayout {
         const wa = win?.get_compositor_private();
         if (!wa)
             return false;
-        const [ww, wh] = [Math.max(1, wa.width), Math.max(1, wa.height)];
+        // Show the window's frame only: the actor also holds its shadow and invisible borders,
+        // and rounding those would leave the window itself with square corners.
+        const frame = win.get_frame_rect();
+        const [ww, wh] = [Math.max(1, frame.width), Math.max(1, frame.height)];
         const s = Math.min(w / ww, h / wh, 1);
-        const clone = new Clutter.Clone({source: wa, width: Math.round(ww * s), height: Math.round(wh * s)});
-        roundCorners(clone, 8);
-        const bin = this._visual(clone);
+        const view = new Clutter.Actor({width: Math.round(ww * s), height: Math.round(wh * s), clip_to_allocation: true});
+        const clone = new Clutter.Clone({source: wa, width: Math.round(wa.width * s), height: Math.round(wa.height * s),
+            x: Math.round((wa.x - frame.x) * s), y: Math.round((wa.y - frame.y) * s)});
+        view.add_child(clone);
+        roundCorners(view, 10);
+        const bin = this._visual(view);
         bin.add_style_class_name('sl-pv-window');
         return true;
     }

@@ -105,11 +105,10 @@ class ResultList extends St.ScrollView {
             x_expand: false, y_expand: true,
         });
         this.accent = '#2190a4';
-        this._scrollIdleId = 0;
+        this._scrollTimeline = null;
         this.connect('destroy', () => {
-            if (this._scrollIdleId)
-                GLib.source_remove(this._scrollIdleId);
-            this._scrollIdleId = 0;
+            this._scrollTimeline?.stop();
+            this._scrollTimeline = null;
         });
         this._box = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, style_class: 'sl-list', x_expand: true});
         this.set_child(this._box);
@@ -257,39 +256,47 @@ class ResultList extends St.ScrollView {
 
     _ensureVisible(animate) {
         const row = this._rowFor[this._sel];
-        if (!row)
+        if (!row || !this.mapped)
             return;
-        const doIt = () => {
-            if (!row.has_allocation())
-                return;
-            const adj = this.vadjustment;
-            const box = row.get_allocation_box();
-            // keep the section header visible when moving up to a section's first row
-            const headerPad = this._sectionStart.includes(this._sel) ? 28 : 6;
-            let v = adj.value;
-            if (box.y1 - headerPad < v)
-                v = Math.max(0, box.y1 - headerPad);
-            else if (box.y2 + 6 > v + adj.page_size)
-                v = box.y2 + 6 - adj.page_size;
-            if (v !== adj.value) {
-                if (animate)
-                    adj.ease(v, {duration: 120, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
-                else
-                    adj.value = v;
-            }
-        };
-        if (this._scrollIdleId)
-            GLib.source_remove(this._scrollIdleId);
-        this._scrollIdleId = 0;
-        if (row.has_allocation()) {
-            doIt();
-        } else {
-            this._scrollIdleId = GLib.idle_add(GLib.PRIORITY_HIGH_IDLE, () => {
-                this._scrollIdleId = 0;
-                doIt();
-                return GLib.SOURCE_REMOVE;
-            });
+        // get_allocation_box() brings the layout up to date first. (Selecting a row restyles it,
+        // so has_allocation() is false right then, and waiting for an idle was not enough: the
+        // list never scrolled to a row the keyboard moved to.)
+        const adj = this.vadjustment;
+        const box = row.get_allocation_box();
+        // keep the section header visible when moving up to a section's first row
+        const headerPad = this._sectionStart.includes(this._sel) ? 28 : 6;
+        let v = adj.value;
+        if (box.y1 - headerPad < v)
+            v = Math.max(0, box.y1 - headerPad);
+        if (this._sel === 0 || v < 16) // near the first rows the list rests exactly at its top
+            v = 0;
+        else if (box.y2 + 6 > v + adj.page_size)
+            v = box.y2 + 6 - adj.page_size;
+        if (v !== adj.value)
+            this._scrollTo(v, animate ? 120 : 0);
+    }
+
+    // Scroll to `v`, eased over `ms`. A timeline on this actor drives it: an adjustment has no frame
+    // clock of its own, and adjustment.ease() silently did nothing here.
+    _scrollTo(v, ms) {
+        const adj = this.vadjustment;
+        this._scrollTimeline?.stop();
+        this._scrollTimeline = null;
+        if (!ms) {
+            adj.value = v;
+            return;
         }
+        const from = adj.value;
+        const tl = new Clutter.Timeline({actor: this, duration: ms, progress_mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+        tl.connect('new-frame', () => {
+            adj.value = from + (v - from) * tl.get_progress();
+        });
+        tl.connect('stopped', () => {
+            if (this._scrollTimeline === tl)
+                this._scrollTimeline = null;
+        });
+        this._scrollTimeline = tl;
+        tl.start();
     }
 
     _onHover(row) {

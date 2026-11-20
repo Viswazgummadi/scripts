@@ -51,7 +51,8 @@ export class WebProvider {
 
     search(q) {
         const text = q.prefix === '?' ? q.text : q.raw.trim();
-        if (!text || q.prefix === '>' || q.kind)
+        // a kind guessed from plain words ("pdf stitcher") still offers the web; "kind:pdf" does not
+        if (!text || q.prefix === '>' || (q.kind && !q.natural))
             return [];
         const url = webSearchUrl(this._ctx.config, text);
         const engine = /https?:\/\/(?:www\.)?([^./]+)/.exec(url)?.[1] ?? 'the web';
@@ -144,7 +145,11 @@ export class DictionaryProvider {
     }
 
     async search(q, cancellable) {
-        const w = q.raw.trim().toLowerCase();
+        // "serendipity", or asked outright: "define x", "definition of x", "meaning of x", "x meaning"
+        const raw = q.raw.trim().toLowerCase();
+        const asked = /^(?:define|definition of|meaning of|what does)\s+(\S+?)(?:\s+mean)?\??$/.exec(raw) ??
+            /^(\S+)\s+(?:meaning|definition)$/.exec(raw);
+        const w = asked ? asked[1] : raw;
         if (q.prefix || q.kind || !/^[a-z][a-z'-]{2,30}$/.test(w))
             return [];
         const hit = (await capture(['look', '-f', w], cancellable)).split('\n').some(x => x.toLowerCase() === w);
@@ -156,7 +161,7 @@ export class DictionaryProvider {
         return [{
             id: `def:${w}`, section: 'definition', noLearn: true,
             title: w, subtitle: first, kind: 'Dictionary',
-            icon: {name: 'accessories-dictionary', fallback: 'accessories-dictionary-symbolic'}, score: 300,
+            icon: {name: 'accessories-dictionary', fallback: 'accessories-dictionary-symbolic'}, score: asked ? 2400 : 300,
             activate: () => openUri(`https://en.wiktionary.org/wiki/${encodeURIComponent(w)}`),
             copy: () => {
                 const d = defCache.get(w);

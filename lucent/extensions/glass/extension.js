@@ -10,6 +10,7 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {SwitcherGlass} from './switchers.js';
 
 const SHADOW_CLASS = 'lucent-bar-shadow';
 const SMOKE_CLASSES = {
@@ -46,6 +47,7 @@ export default class LucentGlassExtension extends Extension {
         this._settings = this.getSettings();
         this._idleId = 0;
         this._settings.connectObject('changed', () => this._apply(), this);
+        this._switchers = null;
         // A theme or light/dark switch can change the text colours: look again, once things settle.
         St.ThemeContext.get_for_stage(global.stage).connectObject('changed', () => this._queueApply(), this);
         // High contrast asks for solid, plain surfaces: the tints step aside while it is on.
@@ -61,6 +63,8 @@ export default class LucentGlassExtension extends Extension {
         St.Settings.get().disconnectObject(this);
         this._settings.disconnectObject(this);
         this._settings = null;
+        this._switchers?.destroy();
+        this._switchers = null;
         this._clear();
     }
 
@@ -93,6 +97,7 @@ export default class LucentGlassExtension extends Extension {
                 ([surface, chain]) => [surface, this._sideFor(chain)]));
             for (const [surface, side] of Object.entries(sides))
                 Main.uiGroup.add_style_class_name(`lucent-${surface}-${side}`);
+            this._menusSide = sides.menus;
             Main.uiGroup.add_style_class_name('lucent-overview');
         }
         if (this._settings.get_boolean('bar-text-shadow'))
@@ -100,6 +105,16 @@ export default class LucentGlassExtension extends Extension {
         const smoke = SMOKE_CLASSES[this._settings.get_string('bar-smoke')];
         if (smoke)
             Main.panel.add_style_class_name(smoke);
+
+        // High contrast asks for plain, solid surfaces: no liquid glass then either.
+        const liquid = this._settings.get_boolean('liquid-switchers') && !St.Settings.get().high_contrast;
+        if (liquid && !this._switchers)
+            this._switchers = new SwitcherGlass(() => this._menusSide ?? this._sideFor(SURFACES.menus),
+                () => this._settings?.get_int('switcher-icon-size') ?? 64);
+        else if (!liquid && this._switchers) {
+            this._switchers.destroy();
+            this._switchers = null;
+        }
     }
 
     // Build a hidden stand-in for a piece of text on a surface and ask the theme for its colour.

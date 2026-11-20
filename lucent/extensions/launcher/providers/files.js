@@ -159,11 +159,27 @@ export class FilesProvider {
     }
 
     async _plocate(q, cancellable) {
+        // Only filters ("kind:pdf", "ext:md"): look the extensions up by name, so files the indexer
+        // does not cover (outside its folders, inside source trees) are found too.
+        // A lone kind word ("pdfs", "screenshots") is the same request as "kind:pdf".
+        const kindOnly = byKindOnly(q);
+        const exts = kindOnly ? KINDS[q.kindHint]?.ext ?? [] : !q.folded ? (q.ext ? [q.ext] : KINDS[q.kind]?.ext ?? []) : [];
+        if (exts.length) {
+            const roots = (this._ctx.config.v.fileRoots ?? ['~']).map(r => expandHome(r).replace(/\/$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+            const re = `^(${roots.join('|')})/.*\\.(${exts.map(e => e.replace(/[^a-z0-9]/gi, '')).join('|')})$`;
+            const text = await capture(['plocate', '-i', '-l', '3000', '--regex', re], cancellable);
+            return this._located(text, []).slice(0, 300).map(r => ({...r, via: kindOnly ? 'kindhint' : r.via}));
+        }
         if (!q.folded || q.folded.length < 2)
             return [];
         const terms = q.folded.split(/\s+/).filter(Boolean);
         const needle = [...terms].sort((a, b) => b.length - a.length)[0];
         const text = await capture(['plocate', '-i', '-b', '-l', '3000', '--', needle], cancellable);
+        return this._located(text, terms);
+    }
+
+    // plocate's lines, kept to the configured roots and out of excluded paths, whose names hold every term
+    _located(text, terms) {
         if (!text)
             return [];
         const roots = (this._ctx.config.v.fileRoots ?? ['~']).map(r => expandHome(r).replace(/\/$/, ''));
@@ -274,7 +290,9 @@ export class FilesProvider {
             cands.push({...r, file, path, name, s});
         }
         cands.sort((a, b) => b.s - a.s);
-        const top = cands.slice(0, mode === 'files' ? 80 : 40);
+        // a search by filters alone ranks by date, which needs a stat() of every candidate
+        const byDate = (!q.folded && q.hasFilters) || byKindOnly(q);
+        const top = cands.slice(0, byDate ? 200 : mode === 'files' ? 80 : 40);
 
         const infos = await Promise.all(top.map(c => queryInfo(c.file, cancellable)));
         const now = Date.now();
@@ -300,6 +318,8 @@ export class FilesProvider {
             let s = c.s;
             if (now - mtime < 7 * 86400000)
                 s += 30;
+            if (byDate) // filters alone: newest first
+                s += Math.max(0, 80 - Math.floor((now - mtime) / 86400000));
             if (c.via === 'recent')
                 s += 200 - i * 3;
             const section = c.via === 'content' && score(q.folded, prepare(c.name)) === 0 ? 'content' : (kind === 'other' ? 'other' : kind);
@@ -333,6 +353,11 @@ export class FilesProvider {
         this._conn?.close?.();
         this._conn = null;
     }
+}
+
+// The whole query is one word that names a kind of file: "pdfs", "screenshots", "videos".
+function byKindOnly(q) {
+    return Boolean(q.kindHint) && !q.kind && !/\s/.test(q.folded ?? '') && (q.folded ?? '').length > 0;
 }
 
 export {KINDS, copyFiles};

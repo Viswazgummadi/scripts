@@ -17,7 +17,7 @@ import Pango from 'gi://Pango';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {Glass} from './glass.js';
+import {Glass, edgeFade, roundCorners} from './glass.js';
 import {ResultList} from './list.js';
 import {Preview} from './preview.js';
 import {completion} from '../core/fuzzy.js';
@@ -29,6 +29,8 @@ const RADIUS = 28;
 const LIST_W = 340;
 const MIN_BODY = 300;
 const MAX_BODY = 440;
+// How long an emptied list waits for slower sources before the panel shrinks to the bar.
+const COLLAPSE_GRACE_MS = 180;
 
 const ACCENTS = {
     blue: '#3584e4', teal: '#2190a4', green: '#3a944a', yellow: '#c88800', orange: '#ed5b00',
@@ -38,7 +40,7 @@ const ACCENTS = {
 const MODES = [
     {key: 'apps', label: 'Apps', icon: 'view-app-grid-symbolic', placeholder: 'Search Apps'},
     {key: 'files', label: 'Files', icon: 'folder-symbolic', placeholder: 'Search Files'},
-    {key: 'actions', label: 'Actions', icon: 'system-run-symbolic', placeholder: 'Search Actions'},
+    {key: 'actions', label: 'Actions', icon: 'bolt-symbolic', fallback: 'system-run-symbolic', placeholder: 'Search Actions'},
     {key: 'clipboard', label: 'Clipboard', icon: 'edit-paste-symbolic', placeholder: 'Search Clipboard'},
 ];
 
@@ -61,10 +63,12 @@ export class LauncherPanel {
         this._grab = null;
         this._mode = null;
         this._view = null;
+        this._targetHeight = BAR_H;
         this._userMoved = false;
         this._remember = null;
         this._ghostFor = null;
         this._toastTimer = 0;
+        this._collapseTimer = 0;
         this._iface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
         St.Settings.get().connectObject('notify::high-contrast', () => this._applyTheme(), this);
         this._iface.connectObject('changed::accent-color', () => this._applyTheme(),
@@ -99,7 +103,7 @@ export class LauncherPanel {
         });
         this._root.add_action(outside);
 
-        this._panel = new St.Widget({style_class: 'sl-panel', layout_manager: new Clutter.BinLayout(), reactive: true,
+        this._panel = new St.Widget({style_class: 'sl-panel', name: 'lucent-launcher-panel', layout_manager: new Clutter.BinLayout(), reactive: true,
             width: cfg.width ?? 760, height: BAR_H, pivot_point: new Graphene.Point({x: 0.5, y: 0.0})});
         this._shadow = new St.Widget({style_class: 'sl-shadow', x_expand: true, y_expand: true});
         this._hairline = new St.Widget({style_class: 'sl-hairline', x_expand: true, y_expand: true});
@@ -126,7 +130,7 @@ export class LauncherPanel {
         this._catButtons = new Map();
         for (const m of MODES) {
             const b = new St.Button({style_class: 'sl-cat', can_focus: false, toggle_mode: false,
-                child: new St.Icon({icon_name: m.icon, style_class: 'sl-cat-icon'})});
+                child: new St.Icon({icon_name: m.icon, fallback_icon_name: m.fallback ?? null, style_class: 'sl-cat-icon'})});
             b.connect('clicked', () => this.setMode(this._mode === m.key ? null : m.key));
             this._catButtons.set(m.key, b);
             this._cats.add_child(b);
@@ -142,6 +146,7 @@ export class LauncherPanel {
             onMore: key => this._engine.expand(key),
         });
         this._list.set_width(LIST_W);
+        edgeFade(this._list);
         this._vsep = new St.Widget({style_class: 'sl-vsep', y_expand: true});
         this._preview = new Preview();
         this._body.add_child(this._list);
@@ -154,6 +159,9 @@ export class LauncherPanel {
 
         for (const a of [this._shadow, this._hairline, this._glass, this._content, this._rim])
             this._panel.add_child(a);
+        // the content is cut by the same shape as the glass, so nothing (a selected row, a
+        // picture) can show past the corners
+        roundCorners(this._content, RADIUS);
         this._root.add_child(this._panel);
 
         // typing
@@ -172,7 +180,11 @@ export class LauncherPanel {
         const cfg = this._config.v;
         const scheme = cfg.theme === 'auto' || !cfg.theme ? (this._iface.get_string('color-scheme') === 'prefer-light' || this._iface.get_string('color-scheme') === 'default' ? 'light' : 'dark') : cfg.theme;
         const dark = scheme !== 'light';
-        this._root.set_style_class_name(`sl-root ${dark ? 'sl-dark' : 'sl-light'}`);
+        const g = cfg.glass ?? {};
+        // High contrast asks for solid surfaces: the panel becomes nearly opaque and plain.
+        const highContrast = St.Settings.get().high_contrast;
+        const liquid = (g.style ?? 'liquid') === 'liquid' && !highContrast;
+        this._root.set_style_class_name(`sl-root ${dark ? 'sl-dark' : 'sl-light'}${liquid ? ' sl-liquid' : ''}`);
         let accent = ACCENTS.blue;
         try {
             accent = ACCENTS[this._iface.get_string('accent-color')] ?? ACCENTS.blue;
@@ -182,15 +194,20 @@ export class LauncherPanel {
         this._accent = accent;
         this._list.setAccent(accent);
         this._chip.style = `background-color: ${accent};`;
-        const g = cfg.glass ?? {};
-        // High contrast asks for solid surfaces: the panel becomes nearly opaque.
-        const highContrast = St.Settings.get().high_contrast;
-        const tintA = highContrast ? 0.96 : Math.max(0, Math.min(1, g.tint ?? 0.5));
+        // liquid glass is clearer than frosted: less tint and blur, a little more colour
+        const tintA = highContrast ? 0.96 : Math.max(0, Math.min(1, liquid ? g.liquidTint ?? 0.36 : g.tint ?? 0.5));
         this._glass.configure({
             radius: RADIUS,
             tint: dark ? [0.11, 0.11, 0.12, tintA] : [0.97, 0.97, 0.98, Math.min(1, tintA + 0.2)],
-            sat: g.saturation ?? 1.7,
-            blur: g.blur ?? 64,
+            sat: liquid ? g.liquidSaturation ?? 1.8 : g.saturation ?? 1.7,
+            // liquid glass is clearer: less blur, and the edge does the work
+            blur: liquid ? g.liquidBlur ?? 18 : g.blur ?? 64,
+            // the edge is always drawn by the shader, on the same shape as the glass; frosted and
+            // high contrast get the rim line only
+            liquid: liquid ? {
+                band: 26, refraction: g.refraction ?? 26, dispersion: 0.3,
+                rim: dark ? 0.65 : 0.9, glow: dark ? 0.07 : 0.09,
+            } : {band: 0, refraction: 0, dispersion: 0, rim: highContrast ? 0.9 : dark ? 0.35 : 0.7, glow: 0},
         });
         if (this._open)
             this._position();
@@ -254,7 +271,11 @@ export class LauncherPanel {
         this._panel.remove_all_transitions();
         this._panel.opacity = 0;
         this._panel.scale_x = this._panel.scale_y = 0.965;
-        this._panel.ease({opacity: 255, scale_x: 1, scale_y: 1, duration: ms(170, this._config.v), mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+        this._panel.ease({opacity: 255, scale_x: 1, scale_y: 1, duration: ms(170, this._config.v), mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            onStopped: finished => {
+                if (finished)
+                    this._repaintAll();
+            }});
     }
 
     close() {
@@ -267,6 +288,7 @@ export class LauncherPanel {
             this._grab = null;
         }
         this._engine.close();
+        this._clearCollapse();
         this._panel.remove_all_transitions();
         this._panel.ease({
             opacity: 0, scale_x: 0.985, scale_y: 0.985, duration: ms(120, this._config.v), mode: Clutter.AnimationMode.EASE_IN_QUAD,
@@ -279,6 +301,7 @@ export class LauncherPanel {
                 this._preview.show(null);
                 this._list.clear();
                 this._panel.height = BAR_H;
+                this._targetHeight = BAR_H;
                 this._sep.hide();
                 this._body.hide();
             },
@@ -333,16 +356,47 @@ export class LauncherPanel {
         this._view = view;
         const keepId = this._userMoved ? this._list.selected?.id : null;
         const has = !view.empty;
-        this._list.setView(view, keepId);
-        if (!has)
-            this._preview.show(null);
+        // When the results go away while they are on show, they stay and fade out as the panel
+        // folds up (cleared when it has); emptying them at once left a blank slab of glass folding.
+        if (has || !this._body.visible) {
+            this._list.setView(view, keepId);
+            if (!has)
+                this._preview.show(null);
+        }
         this._updateGhost();
+        // "No Results" only once every source has answered; until then keep the panel as it is,
+        // so typing does not flash it shut and open again while slower sources are still out.
         const q = view.query.raw.trim();
-        if (!has && (q || this._mode))
-            this._showToast(q || this._mode ? 'No Results' : '', 0);
+        if (!has && (q || this._mode) && !view.pending)
+            this._showToast('No Results', 0);
         else if (this._toast.text === 'No Results')
             this._showToast('', 0);
+        this._clearCollapse();
+        if (!has && view.pending && this._body.visible) {
+            this._collapseTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, COLLAPSE_GRACE_MS, () => {
+                this._collapseTimer = 0;
+                this._resize(false);
+                return GLib.SOURCE_REMOVE;
+            });
+            return;
+        }
         this._resize(has);
+    }
+
+    // The screen is only redrawn where the compositor believes something changed. After the panel
+    // has changed size, part of where it was could be left out, and over a still desktop (nothing
+    // else repainting there) the old panel stayed on screen as a ghost; screenshots and recordings
+    // render the whole frame afresh, so they never showed it. One full repaint once it settles.
+    _repaintAll() {
+        this._root?.queue_redraw();
+        global.stage.queue_redraw();
+    }
+
+    _clearCollapse() {
+        if (this._collapseTimer) {
+            GLib.source_remove(this._collapseTimer);
+            this._collapseTimer = 0;
+        }
     }
 
     _resize(has) {
@@ -355,15 +409,36 @@ export class LauncherPanel {
             this._sep.show();
             this._body.show();
         }
-        if (Math.abs(this._panel.height - target) < 1 && (has || !this._body.visible))
+        for (const a of [this._sep, this._body]) {
+            a.remove_transition('opacity');
+            if (has)
+                a.opacity = 255;
+        }
+        // compare with where the panel is going, not where it is mid-animation: otherwise a shrink
+        // that just started is left running when results come back, and they end up hidden
+        if (Math.abs(this._targetHeight - target) < 1 && (has || !this._body.visible))
             return;
+        this._targetHeight = target;
         this._panel.remove_transition('height');
+        const duration = ms(has ? 220 : 160, this._config.v);
+        if (!has) {
+            for (const a of [this._sep, this._body])
+                a.ease({opacity: 0, duration: Math.round(duration * 0.8), mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+        }
         this._panel.ease({
-            height: target, duration: ms(has ? 220 : 160, this._config.v), mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+            height: target, duration, mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
             onStopped: finished => {
+                if (finished)
+                    this._repaintAll();
                 if (finished && !has) {
                     this._sep.hide();
                     this._body.hide();
+                    this._sep.opacity = this._body.opacity = 255;
+                    // now that it is folded away, show what the engine last said: nothing
+                    if (this._view?.empty) {
+                        this._list.setView(this._view);
+                        this._preview.show(null);
+                    }
                 }
             },
         });
@@ -386,7 +461,9 @@ export class LauncherPanel {
         }
         this._ghostFor = rest ? text + rest : null;
         const esc = s => GLib.markup_escape_text(s, -1);
-        this._ghost.clutter_text.set_markup(`${esc(rest)}<span alpha="55%">${esc(kind)}</span>`);
+        // The typed text is laid out again, invisible, in front of the suggestion: in the entry's
+        // own font it ends exactly where the entry's text ends, at any scale, with no measuring.
+        this._ghost.clutter_text.set_markup(`<span alpha="1">${esc(text)}</span>${esc(rest)}<span alpha="55%">${esc(kind)}</span>`);
         this._ghost.show();
         this._placeGhost();
     }
@@ -407,13 +484,14 @@ export class LauncherPanel {
                 this._ghost.opacity = 0;
                 return GLib.SOURCE_REMOVE;
             }
+            // The ghost starts where the entry's text starts. When the text has scrolled (it is wider
+            // than the entry) the two no longer line up, and there is no room to suggest anyway.
             const ctBox = ct.get_allocation_box();
             const enBox = this._entry.get_allocation_box();
-            const x = enBox.x1 + ctBox.x1 + cx / Math.max(1, ct.get_resource_scale());
-            const room = enBox.x2 - x - 4;
-            this._ghost.translation_x = Math.round(x);
-            this._ghost.width = Math.max(0, room);
-            this._ghost.opacity = room > 20 ? 255 : 0;
+            const room = ctBox.get_width() - cx;
+            this._ghost.translation_x = enBox.x1 + ctBox.x1;
+            this._ghost.width = ctBox.get_width();
+            this._ghost.opacity = room > 24 ? 255 : 0;
             return GLib.SOURCE_REMOVE;
         });
     }
@@ -497,7 +575,8 @@ export class LauncherPanel {
         const ctrl = (state & Clutter.ModifierType.CONTROL_MASK) !== 0;
         const shift = (state & Clutter.ModifierType.SHIFT_MASK) !== 0;
         const STOP = Clutter.EVENT_STOP;
-        const r = this._list.selected;
+        // results that are fading out with the panel are no longer the answer to what is typed
+        const r = this._view?.empty ? null : this._list.selected;
         const ct = this._entry.clutter_text;
         const moved = () => {
             this._userMoved = true;
@@ -634,6 +713,20 @@ export class LauncherPanel {
             ghost: this._ghost?.visible ? this._ghost.text : null,
             height: this._panel?.height,
             pending: v?.pending ?? false,
+            pendingIds: [...(this._engine?._pending ?? [])],
+            glassBox: this._glass ? (() => {
+                const g = this._glass;
+                const [ok, box] = g.get_paint_box();
+                const fx = g.get_effect('sl-glass-mask');
+                const [tx, ty] = g.get_transformed_position();
+                const [tw, th] = g.get_transformed_size();
+                return {paint: ok ? [box.x1, box.y1, box.x2, box.y2] : null, actor: [tx, ty, tw, th], target: fx?.get_target_size?.() ?? null};
+            })() : null,
+            listScroll: this._list ? (() => {
+                const a = this._list.vadjustment;
+                const fx = this._list.get_effect('sl-edge-fade');
+                return {value: a?.value, upper: a?.upper, page: a?.page_size, fade: fx?.enabled ?? null, h: this._list.height};
+            })() : null,
             top: v?.top ? `${v.top.title} [${v.top.section}] ${Math.round(v.top._final)}` : null,
             sections: (v?.sections ?? []).map(s => ({title: s.title, items: s.items.map(i => `${i.title} · ${i.subtitle ?? ''} (${Math.round(i._final)})`)})),
         };
@@ -672,6 +765,7 @@ export class LauncherPanel {
         St.Settings.get().disconnectObject(this);
         if (this._toastTimer)
             GLib.source_remove(this._toastTimer);
+        this._clearCollapse();
         if (this._ghostLater)
             global.compositor.get_laters().remove(this._ghostLater);
         if (this._grab) {

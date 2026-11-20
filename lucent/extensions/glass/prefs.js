@@ -47,6 +47,19 @@ export default class LucentGlassPreferences extends ExtensionPreferences {
         });
         settings.bind('popovers', popovers, 'active', Gio.SettingsBindFlags.DEFAULT);
         menus.add(popovers);
+        const switchers = new Adw.SwitchRow({
+            title: _('Liquid glass switchers'),
+            subtitle: _('Alt+Tab and the other switchers on liquid glass, like Lucent Launcher'),
+        });
+        settings.bind('liquid-switchers', switchers, 'active', Gio.SettingsBindFlags.DEFAULT);
+        menus.add(switchers);
+        const iconSize = new Adw.SpinRow({
+            title: _('Switcher icon size'),
+            subtitle: _('Largest size of the app icons in Alt+Tab, in pixels'),
+            adjustment: new Gtk.Adjustment({lower: 32, upper: 96, step_increment: 8, page_increment: 16}),
+        });
+        settings.bind('switcher-icon-size', iconSize, 'value', Gio.SettingsBindFlags.DEFAULT);
+        menus.add(iconSize);
         page.add(menus);
 
         window.add(page);

@@ -40,10 +40,13 @@ export function makeIcon(spec, size) {
         const thumb = thumbnailFor(spec.file);
         const src = thumb ?? (GLib.file_test(spec.file, GLib.FileTest.EXISTS) ? spec.file : null);
         if (src) {
-            return new St.Icon({
-                gicon: new Gio.FileIcon({file: Gio.File.new_for_path(src)}),
-                icon_size: size,
+            // a rounded tile filled with the picture, not a square cut-out of it
+            const url = Gio.File.new_for_path(src).get_uri().replace(/["\\]/g, '\\$&');
+            return new St.Widget({
                 style_class: 'sl-thumb',
+                width: size, height: size,
+                style: `background-image: url("${url}"); background-size: cover; background-position: center; border-radius: ${Math.max(4, Math.round(size * 0.2))}px;`,
+                y_align: 2,
             });
         }
     }

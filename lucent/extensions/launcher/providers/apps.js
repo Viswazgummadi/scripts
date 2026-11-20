@@ -150,7 +150,7 @@ export class WindowsProvider {
 
     search(q, _c, mode) {
         const out = [];
-        if (q.kind || q.prefix || (!q.folded && mode !== 'apps'))
+        if ((q.kind && !q.natural) || q.prefix || (!q.folded && mode !== 'apps'))
             return out;
         if (!q.folded && mode === 'apps')
             return out; // browsing apps lists apps only

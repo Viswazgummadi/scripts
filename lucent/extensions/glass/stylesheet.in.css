@@ -176,3 +176,18 @@
 .lucent-overview.overview-components-transparent #overviewGroup .search-entry StLabel.hint-text {
   color: @{rgba:highlight,0.7} !important;
 }
+
+/* ---------- Liquid glass switchers (switchers.js) ---------- */
+/* The switcher's own background steps aside: liquid glass (and a shadow) is drawn behind it. */
+.switcher-list.lucent-liquid.lucent-liquid.lucent-liquid {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+/* @sides */
+.lucent-liquid-shadow-@side {
+  background-color: @{rgb:backdrop};
+  box-shadow: 0 18px 56px 0 @{rgba:shadow,0.42};
+}
+/* @end */

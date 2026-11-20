@@ -37,8 +37,15 @@
 .sl-sep { height: 1px; margin: 0 14px; }
 .sl-vsep { width: 1px; margin: 10px 0 12px 0; }
 
-.sl-list-scroll { padding: 6px 0 10px 8px; }
-.sl-list { padding-right: 6px; }
+/* no padding on the scroll view itself: it would clip the list before the edge fade reaches zero */
+.sl-list-scroll { padding: 0 0 0 8px; }
+/* content that runs past an edge fades out to nothing at the clip (edgeFade in ui/glass.js) */
+.sl-list-scroll, .sl-preview-scroll { -st-vfade-offset: 0; }
+/* scroll bars: a thin, quiet thumb over the content, no trough */
+.sl-list-scroll StScrollBar, .sl-preview-scroll StScrollBar { padding: 4px 2px; min-width: 0; background-color: transparent; }
+.sl-list-scroll StScrollBar #trough, .sl-preview-scroll StScrollBar #trough { background-color: transparent; border: none; }
+.sl-list-scroll StScrollBar .vhandle, .sl-preview-scroll StScrollBar .vhandle { width: 4px; min-height: 24px; border-radius: 2px; border: none; margin: 0; }
+.sl-list { padding: 6px 6px 10px 0; }
 .sl-highlight { border-radius: 9px; margin-right: 6px; background-color: -st-accent-color; }
 
 .sl-header { height: 24px; padding: 6px 10px 1px 10px; }
@@ -87,7 +94,7 @@
 
 /* ---- the shell of the panel: these differ in strength, not just in ink ---------------------------- */
 .sl-dark .sl-shadow { box-shadow: 0 24px 72px 0 @{rgba:shadow,0.48}; }
-.sl-dark .sl-hairline { box-shadow: 0 0 0 1px @{rgba:shadow,0.55}; }
+.sl-dark .sl-hairline { box-shadow: 0 0 0 1px @{rgba:shadow,0.32}; }
 .sl-dark .sl-rim {
   border: 1px solid @{rgba:highlight,0.13};
   box-shadow: inset 0 1px 0 0 @{rgba:highlight,0.09};
@@ -101,6 +108,12 @@
   box-shadow: inset 0 1px 0 0 @{rgba:highlight,0.5};
 }
 .sl-light .sl-pv-text-box, .sl-light .sl-pv-code-box, .sl-light .sl-pv-snippet-box { background-color: @{rgba:shadow,0.05}; }
+
+/* The glass draws its whole edge itself (ui/glass.js) on its continuous-corner shape. Styled
+   edges are circles and would not line up with it, so they stay empty, and the shadow's solid base
+   is pulled in where the glass always covers it. */
+.sl-root .sl-rim, .sl-root .sl-hairline { border: none; box-shadow: none; }
+.sl-root .sl-shadow { margin: 10px; }
 
 /* ---- ink ---------------------------------------------------------------------------------------- */
 /* @sides */
@@ -123,6 +136,8 @@
 .sl-@side .sl-cat:checked { background-color: @{rgba:fill,0.16}; color: @{rgb:fill}; }
 
 .sl-@side .sl-sep { background-color: @{rgba:fill,0.09}; }
+.sl-@side .sl-list-scroll StScrollBar .vhandle, .sl-@side .sl-preview-scroll StScrollBar .vhandle { background-color: @{rgba:fill,0.18}; }
+.sl-@side .sl-list-scroll StScrollBar .vhandle:hover, .sl-@side .sl-preview-scroll StScrollBar .vhandle:hover { background-color: @{rgba:fill,0.34}; }
 .sl-@side .sl-vsep { background-color: @{rgba:fill,0.08}; }
 
 .sl-@side .sl-header-label { color: @{rgba:fill,0.46}; }

@@ -229,7 +229,7 @@ export function formatNumber(v) {
         v = 0;
     const a = Math.abs(v);
     if (a !== 0 && (a >= 1e15 || a < 1e-9))
-        return v.toExponential(8).replace(/\.?0+e/, 'e').replace('e+', 'e');
+        return v.toExponential(11).replace(/\.?0+e/, 'e').replace('e+', 'e');
     let s = Number(v.toPrecision(12)).toString();
     if (s.includes('e'))
         return s;
@@ -255,7 +255,12 @@ export function evaluate(text) {
     let p;
     let r;
     try {
-        p = new Parser(tokenize(s));
+        let tokens = tokenize(s);
+        // close what was left open, as people stop typing before the last ")": "(1+2" -> 3
+        const open = tokens.reduce((n, t) => n + (t.k === '(' ? 1 : t.k === ')' ? -1 : 0), 0);
+        if (open > 0 && open <= 4)
+            tokens = tokens.concat(Array.from({length: open}, () => ({k: ')', v: ')'})));
+        p = new Parser(tokens);
         r = p.parse(0);
         if (p.i !== p.t.length)
             return null;

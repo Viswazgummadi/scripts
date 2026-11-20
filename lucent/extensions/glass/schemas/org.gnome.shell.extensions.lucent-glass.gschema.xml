@@ -17,6 +17,17 @@
       <summary>Top bar text shadow</summary>
       <description>A soft shadow under the text and icons of the top bar, to keep their edges crisp over a busy background.</description>
     </key>
+    <key name="liquid-switchers" type="b">
+      <default>true</default>
+      <summary>Liquid glass switchers</summary>
+      <description>The Alt+Tab and other switchers get liquid glass: the view behind them blurred and bent at the edges, with a lit rim.</description>
+    </key>
+    <key name="switcher-icon-size" type="i">
+      <default>64</default>
+      <range min="32" max="96"/>
+      <summary>Switcher icon size</summary>
+      <description>Largest size, in pixels, of the app icons in Alt+Tab. The shell uses 96 when they fit.</description>
+    </key>
     <key name="popovers" type="b">
       <default>true</default>
       <summary>Readable menus and notifications</summary>

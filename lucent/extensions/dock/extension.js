@@ -30,7 +30,7 @@ const SIDES = {
 export default class LucentDockExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
-        this._docks = new Map(); // dock -> {controller, target, layer, stretch, clones: Map(icon -> {clone, destroyId}), labels: Set, separators: Set}
+        this._docks = new Map(); // dock -> {controller, target, layer, stretch, clones: Map(icon -> {clone, destroyId}), labels: Moved, separators: Moved}
         Main.uiGroup.connectObject(
             'child-added', (group, actor) => this._attach(actor),
             'child-removed', (group, actor) => this._detach(actor), this);
@@ -55,7 +55,7 @@ export default class LucentDockExtension extends Extension {
         if (!target)
             return;
         const controller = new Clutter.MotionController();
-        const entry = {controller, target, layer: null, stretch: null, clones: new Map(), labels: new Set(), separators: new Set()};
+        const entry = {controller, target, layer: null, stretch: null, clones: new Map(), labels: new Moved(), separators: new Moved()};
         controller.connect('motion', () => this._update(dock, entry));
         controller.connect('leave', () => this._settle(entry));
         target.add_action(controller);
@@ -129,7 +129,7 @@ export default class LucentDockExtension extends Extension {
             // icon gained. Set directly, without touching transitions: the dock fades labels.
             const label = container.label;
             if (label) {
-                entry.labels.add(label);
+                entry.labels.track(label);
                 const grown = (result[i].scale - 1) * (side.vertical ? b.w : b.h);
                 label.translation_x = side.vertical ? grown * (side.pivot[0] === 0 ? 1 : -1) : result[i].shift;
                 label.translation_y = side.vertical ? result[i].shift : grown * (side.pivot[1] === 0 ? 1 : -1);
@@ -164,7 +164,7 @@ export default class LucentDockExtension extends Extension {
             const after = centers[i + 1] + result[i + 1].shift - sizes[i + 1] * result[i + 1].scale / 2;
             const was = (centers[i] + sizes[i] / 2 + centers[i + 1] - sizes[i + 1] / 2) / 2;
             const move = (before + after) / 2 - was;
-            entry.separators.add(separator);
+            entry.separators.track(separator);
             separator.remove_transition('translation-x');
             separator.remove_transition('translation-y');
             separator.set({translation_x: side.vertical ? 0 : move, translation_y: side.vertical ? move : 0});
@@ -173,9 +173,7 @@ export default class LucentDockExtension extends Extension {
 
     // The pointer left: grow the clones back to the icons' own size and place, then hand over.
     _settle(entry) {
-        for (const label of entry.labels)
-            label.set({translation_x: 0, translation_y: 0});
-        entry.labels.clear();
+        entry.labels.reset();
         const ms = this._settings.get_int('settle-time');
         const clones = [...entry.clones.values()].map(c => c.clone);
         const st = St.Settings.get();
@@ -184,8 +182,7 @@ export default class LucentDockExtension extends Extension {
             return;
         }
         entry.stretch?.ease(ms);
-        for (const separator of entry.separators)
-            separator.ease({translation_x: 0, translation_y: 0, duration: ms, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+        entry.separators.ease(ms);
         // Hand over once every clone is back, unless a new hover took over in the meantime
         // (it clears the token); a clone whose icon went away also counts as back.
         const token = entry.settling = {};
@@ -218,19 +215,45 @@ export default class LucentDockExtension extends Extension {
     _clear(entry) {
         for (const icon of [...entry.clones.keys()])
             this._drop(entry, icon, true);
-        for (const label of entry.labels)
-            label.set({translation_x: 0, translation_y: 0});
-        entry.labels.clear();
+        entry.labels.reset();
         entry.stretch?.release();
         entry.stretch = null;
-        for (const separator of entry.separators) {
-            separator.remove_transition('translation-x');
-            separator.remove_transition('translation-y');
-            separator.set({translation_x: 0, translation_y: 0});
-        }
-        entry.separators.clear();
+        entry.separators.reset();
         entry.layer?.destroy();
         entry.layer = null;
+    }
+}
+
+/**
+ * Actors of the dock's own (labels, separators) that this moves with translation, to be put back.
+ * Dash to Dock may destroy any of them at any time (it rebuilds its icons), so each is forgotten
+ * the moment it is destroyed instead of being touched afterwards.
+ */
+class Moved {
+    constructor() {
+        this._actors = new Map(); // actor -> destroy handler id
+    }
+
+    track(actor) {
+        if (!this._actors.has(actor))
+            this._actors.set(actor, actor.connect('destroy', () => this._actors.delete(actor)));
+    }
+
+    // Back to no translation over `ms` milliseconds; they stay tracked until reset().
+    ease(ms) {
+        for (const actor of this._actors.keys())
+            actor.ease({translation_x: 0, translation_y: 0, duration: ms, mode: Clutter.AnimationMode.EASE_OUT_QUAD});
+    }
+
+    // Back to no translation now, and forget them.
+    reset() {
+        for (const [actor, id] of this._actors) {
+            actor.disconnect(id);
+            actor.remove_transition('translation-x');
+            actor.remove_transition('translation-y');
+            actor.set({translation_x: 0, translation_y: 0});
+        }
+        this._actors.clear();
     }
 }
 

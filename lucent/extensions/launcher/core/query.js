@@ -237,6 +237,11 @@ export function dateMath(text, now = new Date()) {
             d.setFullYear(d.getFullYear() + k);
         return {title: formatDate(d), subtitle: `${n} ${unit} ${sign === '-' ? 'before' : 'after'} ${base}`, copy: isoDate(d)};
     }
+    if ((m = /^(?:what(?:'s|\s+is)\s+)?(?:the\s+)?(today|tomorrow|yesterday|date(?:\s+today)?|today'?s date)\??$/.exec(s))) {
+        const word = m[1].startsWith('tomorrow') ? 'tomorrow' : m[1].startsWith('yesterday') ? 'yesterday' : 'today';
+        const d = parseDay(word, now);
+        return {title: formatDate(d), subtitle: word[0].toUpperCase() + word.slice(1), copy: isoDate(d)};
+    }
     if ((m = /^(?:what\s+)?day\s+(?:is|was|of)\s+(.+?)\??$/.exec(s))) {
         const d = parseDay(m[1], now);
         return d ? {title: d.toLocaleDateString('en-GB', {weekday: 'long'}), subtitle: formatDate(d), copy: formatDate(d)} : null;

@@ -85,6 +85,14 @@ export const tests = {
         equal(calc.evaluate('hello'), null);
         equal(calc.evaluate('2 +'), null);
     },
+    'a bracket left open is closed'() {
+        equal(value('(1+2'), 3);
+        equal(value('2*(3+(4'), 14);
+    },
+    'huge results keep twelve significant digits'() {
+        equal(calc.evaluate('2^64').display, '1.84467440737e19');
+        equal(calc.formatNumber(3e20), '3e20');
+    },
     'division by zero shows infinity'() {
         equal(calc.evaluate('1/0').display, '∞');
     },
@@ -145,6 +153,12 @@ export const tests = {
     },
     'days until a date'() {
         equal(query.dateMath('days until christmas', new Date(2026, 11, 20)).title, '5 days');
+    },
+    'today, tomorrow and yesterday answer with the date'() {
+        const now = new Date(2026, 10, 20, 15);
+        equal(query.dateMath('tomorrow', now).title, 'Saturday, 21 November 2026');
+        equal(query.dateMath('yesterday', now).copy, '2026-11-19');
+        equal(query.dateMath("what's the date", now).subtitle, 'Today');
     },
     'time zones are recognised by place'() {
         ok(query.timeQuery('time in tokyo')?.zone);

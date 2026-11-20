@@ -2,6 +2,7 @@
 // GNOME's D-Bus search providers (Settings, Calendar, Contacts, Characters, Clocks, Weather,
 // Software, Boxes, ...), loaded with the shell's own loader so the user's search settings
 // (enabled/disabled/sort order) apply. Files and Calculator are skipped: we do both better.
+import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import * as RemoteSearch from 'resource:///org/gnome/shell/ui/remoteSearch.js';
 import {registerSection} from '../core/engine.js';
@@ -18,6 +19,29 @@ const TITLES = {
     'org.gnome.Boxes.desktop': ['boxes', 'Virtual Machines', -60],
 };
 
+// A provider that does not answer in this time (an app whose D-Bus service hangs or never starts)
+// is left out of the search, and then skipped for SLOW_BACKOFF_MS so it cannot hold up every query.
+const ANSWER_MS = 1500;
+const SLOW_BACKOFF_MS = 60000;
+
+class TimedOut extends Error {}
+
+// Resolve with `promise`, or reject with TimedOut after `ms`; the timer never outlives the race.
+function within(promise, ms) {
+    let id = 0;
+    const timer = new Promise((_, reject) => {
+        id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
+            id = 0;
+            reject(new TimedOut());
+            return GLib.SOURCE_REMOVE;
+        });
+    });
+    return Promise.race([promise, timer]).finally(() => {
+        if (id)
+            GLib.source_remove(id);
+    });
+}
+
 class OneRemote {
     constructor(rp) {
         this._rp = rp;
@@ -32,18 +56,32 @@ class OneRemote {
         this.minChars = 2;
         this.delay = 130;
         this.modes = key === 'settings' ? ['actions'] : [];
+        this._skipUntil = 0;
     }
 
     async search(q, cancellable) {
-        if (q.prefix || q.kind || !q.text)
+        if (q.prefix || (q.hasFilters && !q.natural) || !q.text)
+            return [];
+        const now = GLib.get_monotonic_time() / 1000;
+        if (now < this._skipUntil)
             return [];
         const terms = q.text.split(/\s+/).filter(Boolean);
         const rp = this._rp;
-        let ids = await rp.getInitialResultSet(terms, cancellable);
-        ids = rp.filterResults(ids, 6);
-        if (!ids.length)
+        let ids, metas;
+        try {
+            ids = await within(rp.getInitialResultSet(terms, cancellable), ANSWER_MS);
+            ids = rp.filterResults(ids, 6);
+            if (!ids.length)
+                return [];
+            metas = await within(rp.getResultMetas(ids, cancellable), ANSWER_MS);
+        } catch (e) {
+            if (!(e instanceof TimedOut))
+                throw e;
+            this._skipUntil = GLib.get_monotonic_time() / 1000 + SLOW_BACKOFF_MS;
             return [];
-        const metas = await rp.getResultMetas(ids, cancellable);
+        }
+        if (!this._rp)
+            return [];
         const appName = rp.appInfo.get_name();
         return metas.map((m, i) => {
             let gicon = null;

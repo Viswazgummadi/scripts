@@ -21,6 +21,8 @@
 //   {"op":"style","class":"calendar-day","limit":3}   colours St resolved for actors with that class
 //   {"op":"tree","name":"dashtodockContainer","depth":6}   actor tree under a named actor -> tree.txt
 //   {"op":"close-window","title":"..."}       close the first window whose title contains the text
+//   {"op":"workspace","to":"empty|back"}      show the empty last workspace (bare wallpaper), then return
+//   {"op":"switcher","show":true|false}       show the Alt+Tab popup (no grab, switches nothing) / remove it
 //   {"op":"reload"}                           run a fresh copy of this tool's own code
 //
 // Files named in "name" land in ~/.cache/lucent-probe/. Nothing here ships in a Lucent release.
@@ -30,6 +32,7 @@ import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as AltTab from 'resource:///org/gnome/shell/ui/altTab.js';
 import {ExtensionType} from 'resource:///org/gnome/shell/misc/extensionUtils.js';
 
 const CACHE = GLib.build_filenamev([GLib.get_user_cache_dir(), 'lucent-probe']);
@@ -140,6 +143,8 @@ export class Probe {
                 case 'style': this._write(c.name ?? 'style.json', this._style(c.class, c.limit ?? 3)); break;
                 case 'tree': this._write(c.file ?? 'tree.txt', this._tree(c.name, c.depth ?? 6)); break;
                 case 'close-window': results['close-window'] = this._closeWindow(c.title); break;
+                case 'workspace': results.workspace = this._workspace(c.to); break;
+                case 'switcher': results.switcher = this._switcher(c.show !== false); break;
                 case 'reload':
                     this._write(`done-${id}.json`, {id, errors, results, reloaded: true});
                     GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
@@ -403,6 +408,49 @@ export class Probe {
         };
         walk(root, 0);
         return `${lines.join('\n')}\n`;
+    }
+
+    // "empty": go to the last workspace (GNOME keeps it empty) to see the bare wallpaper;
+    // "back": return to the workspace that was active before.
+    _workspace(to) {
+        const wm = global.workspace_manager;
+        const time = global.get_current_time();
+        if (to === 'empty') {
+            this._wsBack ??= wm.get_active_workspace_index();
+            const last = wm.get_workspace_by_index(wm.get_n_workspaces() - 1);
+            if (last.list_windows().length)
+                return {error: 'last workspace is not empty'};
+            last.activate(time);
+        } else if (to === 'back' && this._wsBack !== undefined && this._wsBack !== null) {
+            wm.get_workspace_by_index(this._wsBack)?.activate(time);
+            this._wsBack = null;
+        }
+        return {active: wm.get_active_workspace_index(), count: wm.get_n_workspaces()};
+    }
+
+    // Show the Alt+Tab popup without show(): no grab, no modifier watch, so nothing gets switched.
+    _switcher(show) {
+        this._switcherPopup?.destroy();
+        this._switcherPopup = null;
+        if (!show)
+            return {shown: false};
+        const popup = new AltTab.AppSwitcherPopup();
+        if (!popup._items.length) {
+            popup.destroy();
+            return {shown: false, error: 'no apps running'};
+        }
+        // what show() does, minus the grab and the "modifier released" check that would switch
+        popup.add_child(popup._switcherList);
+        popup.opacity = 255;
+        popup.visible = true;
+        popup.get_allocation_box();
+        popup._select(Math.min(1, popup._items.length - 1));
+        this._switcherPopup = popup;
+        popup.connect('destroy', () => {
+            if (this._switcherPopup === popup)
+                this._switcherPopup = null;
+        });
+        return {shown: true, items: popup._items.length};
     }
 
     _closeWindow(title) {
