@@ -47,6 +47,13 @@ export default class LucentGlassPreferences extends ExtensionPreferences {
         });
         settings.bind('popovers', popovers, 'active', Gio.SettingsBindFlags.DEFAULT);
         menus.add(popovers);
+        const clear = new Adw.SwitchRow({
+            title: _('See-through menus'),
+            subtitle: _('Quick Settings, the calendar and the top-bar menus at 70%, like a translucent terminal; harder to read over a bright window'),
+        });
+        settings.bind('clear-menus', clear, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('popovers', clear, 'sensitive', Gio.SettingsBindFlags.GET);
+        menus.add(clear);
         const switchers = new Adw.SwitchRow({
             title: _('Liquid glass switchers'),
             subtitle: _('Alt+Tab and the other switchers on liquid glass, like Lucent Launcher. With Blur my Shell, turn off its switcher blur (Popups), or the two glasses stack'),

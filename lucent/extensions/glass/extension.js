@@ -13,6 +13,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {SwitcherGlass} from './switchers.js';
 
 const SHADOW_CLASS = 'lucent-bar-shadow';
+const CLEAR_CLASS = 'lucent-clear';
 const SMOKE_CLASSES = {
     light: 'lucent-smoke-light',
     medium: 'lucent-smoke-medium',
@@ -84,6 +85,7 @@ export default class LucentGlassExtension extends Extension {
                 Main.uiGroup.remove_style_class_name(`lucent-${surface}-${side}`);
         }
         Main.uiGroup.remove_style_class_name('lucent-overview');
+        Main.uiGroup.remove_style_class_name(CLEAR_CLASS);
         Main.panel.remove_style_class_name(SHADOW_CLASS);
         for (const name of Object.values(SMOKE_CLASSES))
             Main.panel.remove_style_class_name(name);
@@ -99,6 +101,8 @@ export default class LucentGlassExtension extends Extension {
                 Main.uiGroup.add_style_class_name(`lucent-${surface}-${side}`);
             this._menusSide = sides.menus;
             Main.uiGroup.add_style_class_name('lucent-overview');
+            if (this._settings.get_boolean('clear-menus'))
+                Main.uiGroup.add_style_class_name(CLEAR_CLASS);
         }
         if (this._settings.get_boolean('bar-text-shadow'))
             Main.panel.add_style_class_name(SHADOW_CLASS);

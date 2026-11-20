@@ -37,6 +37,15 @@
   border-color: @{rgba:stroke,material.hairline} !important;
 }
 
+/* See-through menus (setting clear-menus): the same material as a translucent terminal, 70%.
+   One more class than the rules around them, so these win when the setting is on. */
+.lucent-menus-@side.lucent-clear .popup-menu-boxpointer .popup-menu-content,
+.lucent-quick-@side.lucent-clear .popup-menu-boxpointer .quick-settings,
+.lucent-quick-@side.lucent-clear .popup-menu-boxpointer .popup-menu-content.quick-settings,
+.lucent-date-@side.lucent-clear .popup-menu-boxpointer .popup-menu-content.datemenu-popover {
+  background: @{rgba:menu,material.menu} !important;
+}
+
 /* Calendar and notification list */
 .lucent-date-@side .popup-menu-boxpointer .popup-menu-content.datemenu-popover {
   background: @{rgba:surface,material.popover} !important;
