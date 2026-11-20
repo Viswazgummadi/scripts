@@ -12,6 +12,7 @@
 // When the pointer leaves, the clones ease back to the icons' own size and place, and the real
 // icons are shown again.
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -80,7 +81,7 @@ export default class LucentDockExtension extends Extension {
             return;
         const side = SIDES[Object.keys(SIDES).find(s => dock.has_style_class_name(s)) ?? 'bottom'];
 
-        entry.settling = null;
+        this._cancelSettle(entry); // a new hover takes over from a settle in progress
         if (!entry.layer) {
             entry.layer = new Clutter.Actor({reactive: false});
             Main.uiGroup.insert_child_above(entry.layer, dock);
@@ -183,20 +184,29 @@ export default class LucentDockExtension extends Extension {
         }
         entry.stretch?.ease(ms);
         entry.separators.ease(ms);
-        // Hand over once every clone is back, unless a new hover took over in the meantime
-        // (it clears the token); a clone whose icon went away also counts as back.
-        const token = entry.settling = {};
-        let left = clones.length;
         for (const clone of clones) {
             clone.ease({
                 scale_x: 1, scale_y: 1, translation_x: 0, translation_y: 0,
                 duration: ms,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-                onStopped: () => {
-                    if (--left === 0 && entry.settling === token)
-                        this._clear(entry);
-                },
             });
+        }
+        // Hand over once the clones are back, from a timer of its own: never from a transition's
+        // stopped callback, which also runs when a clone is destroyed (the dock rebuilding or going
+        // away), in the middle of Clutter destroying things; clearing from there destroyed the layer
+        // a second time inside its own destruction, and Clutter aborted the whole shell.
+        this._cancelSettle(entry);
+        entry.settleTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms + 30, () => {
+            entry.settleTimer = 0;
+            this._clear(entry);
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _cancelSettle(entry) {
+        if (entry.settleTimer) {
+            GLib.source_remove(entry.settleTimer);
+            entry.settleTimer = 0;
         }
     }
 
@@ -212,15 +222,25 @@ export default class LucentDockExtension extends Extension {
             icon.opacity = 255;
     }
 
+    // Everything is taken off the entry before anything is destroyed, and a call made while one
+    // runs does nothing: whatever a destruction sets off can find nothing left to destroy again.
     _clear(entry) {
-        for (const icon of [...entry.clones.keys()])
+        if (entry.clearing)
+            return;
+        entry.clearing = true;
+        this._cancelSettle(entry);
+        const icons = [...entry.clones.keys()];
+        const layer = entry.layer;
+        entry.layer = null;
+        const stretch = entry.stretch;
+        entry.stretch = null;
+        for (const icon of icons)
             this._drop(entry, icon, true);
         entry.labels.reset();
-        entry.stretch?.release();
-        entry.stretch = null;
+        stretch?.release();
         entry.separators.reset();
-        entry.layer?.destroy();
-        entry.layer = null;
+        layer?.destroy();
+        entry.clearing = false;
     }
 }
 
