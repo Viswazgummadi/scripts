@@ -268,10 +268,11 @@ class ResultList extends St.ScrollView {
         let v = adj.value;
         if (box.y1 - headerPad < v)
             v = Math.max(0, box.y1 - headerPad);
-        if (this._sel === 0 || v < 16) // near the first rows the list rests exactly at its top
-            v = 0;
         else if (box.y2 + 6 > v + adj.page_size)
             v = box.y2 + 6 - adj.page_size;
+        // near the first rows the list rests exactly at its top (no sliver of top fade)
+        if (this._sel === 0 || v < 16)
+            v = 0;
         if (v !== adj.value)
             this._scrollTo(v, animate ? 120 : 0);
     }
