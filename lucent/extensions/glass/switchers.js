@@ -7,7 +7,7 @@
 // faded with the popup, and removed with it. The list's own flat background is turned off.
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {Glass} from './liquid.js';
+import {Glass, monitorScale, onPixel} from './liquid.js';
 
 // widest an app switcher item gets for a long name, px
 const MAX_ITEM = 128;
@@ -70,15 +70,20 @@ export class SwitcherGlass {
         const sync = () => {
             if (!list.has_allocation())
                 return;
-            const [x, y] = list.get_transformed_position();
-            const [w, h] = list.get_transformed_size();
-            sized = w >= 1 && h >= 1;
+            const [lx, ly] = list.get_transformed_position();
+            const [lw, lh] = list.get_transformed_size();
+            sized = lw >= 1 && lh >= 1;
             follow();
-            glass.set_position(Math.round(x), Math.round(y));
-            glass.set_size(Math.round(w), Math.round(h));
-            glass.setOrigin(Math.round(x), Math.round(y));
-            shadow.set_position(Math.round(x) + 10, Math.round(y) + 10);
-            shadow.set_size(Math.max(0, Math.round(w) - 20), Math.max(0, Math.round(h) - 20));
+            // every edge on a whole device pixel, so left and right (and top and bottom) are drawn
+            // alike: at 1.5x an odd logical size would put one edge on a half pixel
+            const s = monitorScale(list);
+            const [x, y] = [onPixel(lx, s), onPixel(ly, s)];
+            const [w, h] = [onPixel(lx + lw, s) - x, onPixel(ly + lh, s) - y];
+            glass.set_position(x, y);
+            glass.set_size(w, h);
+            glass.setOrigin(x, y);
+            shadow.set_position(x + 10, y + 10);
+            shadow.set_size(Math.max(0, w - 20), Math.max(0, h - 20));
             shadow.style = `border-radius: ${radius}px;`;
         };
         // never drawn before the list has a size: an effect on a zero-sized actor has nothing to draw into
@@ -116,6 +121,9 @@ export class SwitcherGlass {
             item._square = false;
             item.set_style(`min-width: ${width}px;`);
         }
+        // the list sizes itself for square items too (its own flag): without this the box stays as
+        // wide as the old squares and the spare width spills unevenly to the sides
+        list._squareItems = false;
         list.queue_relayout();
     }
 

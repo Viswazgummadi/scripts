@@ -17,7 +17,7 @@ import Pango from 'gi://Pango';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {Glass, edgeFade, roundCorners} from './glass.js';
+import {Glass, edgeFade, onPixel, roundCorners} from './glass.js';
 import {ResultList} from './list.js';
 import {Preview} from './preview.js';
 import {completion} from '../core/fuzzy.js';
@@ -222,10 +222,12 @@ export class LauncherPanel {
 
     _position() {
         const mon = Main.layoutManager.currentMonitor ?? Main.layoutManager.primaryMonitor;
-        const w = Math.min(this._config.v.width ?? 760, mon.width - 32);
+        // every edge on a whole device pixel, so opposite edges are drawn alike (see onPixel)
+        const s = this._scale = global.display.get_monitor_scale(mon.index) || 1;
+        const w = onPixel(Math.min(this._config.v.width ?? 760, mon.width - 32), s);
         this._panel.width = w;
-        const x = Math.round(mon.x + (mon.width - w) / 2);
-        const y = Math.round(mon.y + mon.height * Math.max(0.05, Math.min(0.5, this._config.v.top ?? 0.2)));
+        const x = onPixel(mon.x + (mon.width - w) / 2, s);
+        const y = onPixel(mon.y + mon.height * Math.max(0.05, Math.min(0.5, this._config.v.top ?? 0.2)), s);
         this._panel.set_position(x, y);
         this._glass.setOrigin(x, y);
         this._maxBody = Math.min(MAX_BODY, mon.y + mon.height - y - BAR_H - 40);
@@ -403,7 +405,9 @@ export class LauncherPanel {
         let target = BAR_H;
         if (has) {
             const nat = this._list.naturalHeight() + 16;
-            const bodyH = Math.round(Math.max(MIN_BODY, Math.min(this._maxBody ?? MAX_BODY, nat)));
+            let bodyH = Math.round(Math.max(MIN_BODY, Math.min(this._maxBody ?? MAX_BODY, nat)));
+            // the panel's bottom edge on a whole device pixel too
+            bodyH = onPixel(BAR_H + 1 + bodyH, this._scale ?? 1) - BAR_H - 1;
             this._body.height = bodyH;
             target = BAR_H + 1 + bodyH;
             this._sep.show();

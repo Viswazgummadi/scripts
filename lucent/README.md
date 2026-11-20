@@ -94,6 +94,8 @@ when you save it.
 - Lucent Glass decides dark or light per surface from the text the theme draws. With the stock light
   theme and Blur my Shell, the volume slider in Quick Settings is hard to see; that comes from the
   theme's own colours.
+- Lucent Glass puts Alt+Tab on liquid glass. Blur my Shell blurs switchers too; turn that off in its
+  Popups settings (switchers), or the two glasses stack and the edges no longer match.
 - Lucent Dock needs Dash to Dock (or Ubuntu Dock). The dock's background widens with the grown
   icons; a glass drawn by another extension follows it when that extension tracks the background's
   transformed size, as Blur my Shell does.

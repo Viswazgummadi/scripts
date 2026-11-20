@@ -21,6 +21,7 @@ import GObject from 'gi://GObject';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 // GType names unique per loaded copy of this file: it is copied into every extension that uses
 // it, and a development reload imports a fresh copy; GObject refuses a type name twice.
@@ -125,8 +126,9 @@ rgb = mix(rgb, tint.rgb, tint.a);
 
 // light from above: a crisp specular line on the rim, brightest where it faces up, a fainter
 // bounce along the bottom, and a soft glow inside the band
-float up = max(dot(n, vec2(-0.35, -0.94)), 0.0);
-float down = max(dot(n, vec2(0.35, 0.94)), 0.0);
+// light from straight above: the left and right halves mirror each other exactly
+float up = max(-n.y, 0.0);
+float down = max(n.y, 0.0);
 float line = 1.0 - smoothstep(0.0, 1.6 * scale, -d);
 // nearly even all round, so the outline never fades out at the ends; a little brighter facing up
 rgb = mix(rgb, vec3(1.0), clamp(line * rim * (0.62 + 0.38 * up + 0.12 * down), 0.0, 1.0));
@@ -292,6 +294,22 @@ class GlassMask extends Clutter.ShaderEffect {
 
 // The size the actor is laid out at. Not actor.width/height: before a pending layout those report
 // the preferred size, and the glass prefers the size of the whole screen it clones.
+// ---- whole device pixels ---------------------------------------------------------------------------
+// At a fractional scale (1.5) an odd logical length is a half device pixel: an edge there is
+// smoothed differently from its opposite edge, and a shape looks lopsided. Glass boxes snap their
+// edges to whole device pixels.
+
+// The scale of the monitor showing `actor` (1 when unknown).
+export function monitorScale(actor) {
+    const index = actor ? Main.layoutManager.findIndexForActor(actor) : -1;
+    return index >= 0 ? global.display.get_monitor_scale(index) || 1 : 1;
+}
+
+// `value` (logical pixels) moved to the nearest whole device pixel at `scale`.
+export function onPixel(value, scale) {
+    return scale > 0 ? Math.round(value * scale) / scale : value;
+}
+
 function allocatedSize(actor) {
     const box = actor.get_allocation_box();
     return [box.get_width(), box.get_height()];

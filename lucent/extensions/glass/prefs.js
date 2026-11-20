@@ -49,7 +49,7 @@ export default class LucentGlassPreferences extends ExtensionPreferences {
         menus.add(popovers);
         const switchers = new Adw.SwitchRow({
             title: _('Liquid glass switchers'),
-            subtitle: _('Alt+Tab and the other switchers on liquid glass, like Lucent Launcher'),
+            subtitle: _('Alt+Tab and the other switchers on liquid glass, like Lucent Launcher. With Blur my Shell, turn off its switcher blur (Popups), or the two glasses stack'),
         });
         settings.bind('liquid-switchers', switchers, 'active', Gio.SettingsBindFlags.DEFAULT);
         menus.add(switchers);
