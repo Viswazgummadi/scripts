@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="lucent-corner">
+  <schema id="org.gnome.shell.extensions.lucent-corner" path="/org/gnome/shell/extensions/lucent-corner/">
+    <key name="dwell-time" type="i">
+      <default>120</default>
+      <range min="0" max="1000"/>
+      <summary>Dwell time</summary>
+      <description>How long the pointer has to rest in the corner before Quick Settings opens, in milliseconds.</description>
+    </key>
+    <key name="open-in-overview" type="b">
+      <default>false</default>
+      <summary>Also open in the overview</summary>
+      <description>Whether the corner reacts while the overview is shown.</description>
+    </key>
+  </schema>
+</schemalist>

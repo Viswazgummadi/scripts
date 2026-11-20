@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="lucent-glass">
+  <schema id="org.gnome.shell.extensions.lucent-glass" path="/org/gnome/shell/extensions/lucent-glass/">
+    <key name="bar-smoke" type="s">
+      <choices>
+        <choice value="none"/>
+        <choice value="light"/>
+        <choice value="medium"/>
+        <choice value="heavy"/>
+      </choices>
+      <default>'medium'</default>
+      <summary>Top bar smoke</summary>
+      <description>How much the top bar is darkened behind its white text: 'none', 'light' (30%), 'medium' (45%, passes WCAG AA over a bright wallpaper) or 'heavy' (60%).</description>
+    </key>
+    <key name="bar-text-shadow" type="b">
+      <default>true</default>
+      <summary>Top bar text shadow</summary>
+      <description>A soft shadow under the text and icons of the top bar, to keep their edges crisp over a busy background.</description>
+    </key>
+    <key name="popovers" type="b">
+      <default>true</default>
+      <summary>Readable menus and notifications</summary>
+      <description>Give menus, the calendar and notification banners the tinted glass material.</description>
+    </key>
+  </schema>
+</schemalist>

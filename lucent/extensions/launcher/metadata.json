@@ -1,0 +1,9 @@
+{
+  "uuid": "lucent-launcher@viswazgummadi.github.io",
+  "name": "Lucent Launcher",
+  "description": "A keyboard launcher on a sheet of glass: apps, windows, files, a calculator, unit and currency conversion, system toggles, timers, definitions, web shortcuts and your own commands, ranked by what you actually pick.\n\nWhat it touches, so there are no surprises: it keeps a clipboard history (in memory unless you switch on saving) and can paste from it; it runs the commands you type after '>'; and it contacts the network only for a currency rate table from the ECB, for word definitions, and, if you switch it on, for search suggestions. Each of these can be turned off in the preferences.",
+  "shell-version": ["51"],
+  "url": "https://github.com/Viswazgummadi/lucent",
+  "gettext-domain": "lucent-launcher",
+  "version-name": "0.1.0"
+}

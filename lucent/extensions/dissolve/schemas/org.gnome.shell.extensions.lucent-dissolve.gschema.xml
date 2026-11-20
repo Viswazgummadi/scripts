@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="lucent-dissolve">
+  <schema id="org.gnome.shell.extensions.lucent-dissolve" path="/org/gnome/shell/extensions/lucent-dissolve/">
+    <key name="style" type="s">
+      <choices>
+        <choice value="mist"/>
+        <choice value="pixels"/>
+        <choice value="fade"/>
+        <choice value="random"/>
+      </choices>
+      <default>'mist'</default>
+      <summary>Style</summary>
+      <description>How a closing window disappears: 'mist' (drifts away as fine dust), 'pixels' (blocks blink out), 'fade' (shrinks, blurs and fades) or 'random' (mist or pixels).</description>
+    </key>
+    <key name="duration" type="i">
+      <default>600</default>
+      <range min="150" max="2000"/>
+      <summary>Duration</summary>
+      <description>Length of the animation for normal windows, in milliseconds. Dialogs take a little under half of it.</description>
+    </key>
+    <key name="keep-own-timing" type="b">
+      <default>false</default>
+      <summary>Keep this timing</summary>
+      <description>Play at the duration set here even when the desktop's animations are sped up or slowed down.</description>
+    </key>
+  </schema>
+</schemalist>

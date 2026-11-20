@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Send commands to the Lucent Probe extension and print its answer.
+#
+#   tools/probe '{"op":"info"}'
+#   tools/probe '{"op":"trial","name":"corner","dir":"'$PWD'/build/<uuid>"}' '{"op":"wait","ms":500}'
+#
+# Each argument is one command (see dev/probe/src/main.js). Waits up to PROBE_TIMEOUT seconds (default 30).
+set -euo pipefail
+dir="${XDG_CACHE_HOME:-$HOME/.cache}/lucent-probe"
+id="$$-$(date +%s%N)"
+done_file="$dir/done-$id.json"
+mkdir -p "$dir"
+{ printf '{"op":"id","id":"%s"}\n' "$id"; printf '%s\n' "$@"; } > "$dir/cmd.tmp"
+mv "$dir/cmd.tmp" "$dir/cmd"
+deadline=$(( $(date +%s) + ${PROBE_TIMEOUT:-30} ))
+until [ -s "$done_file" ]; do
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+        echo "probe: no answer (is lucent-probe enabled?)" >&2
+        exit 2
+    fi
+    read -r -t 0.1 _ < <(:) || true
+done
+cat "$done_file"; echo
+rm -f "$done_file"

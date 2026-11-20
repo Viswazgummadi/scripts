@@ -1,0 +1,10 @@
+{
+  "uuid": "lucent-corner@viswazgummadi.github.io",
+  "name": "Lucent Corner",
+  "description": "Rest the pointer in the top corner next to the system menu and Quick Settings opens. Clicking the corner toggles it. The corner steps aside for fullscreen windows.",
+  "shell-version": ["51"],
+  "url": "https://github.com/Viswazgummadi/lucent",
+  "settings-schema": "org.gnome.shell.extensions.lucent-corner",
+  "gettext-domain": "lucent-corner",
+  "version-name": "0.1.0"
+}

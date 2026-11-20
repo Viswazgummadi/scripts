@@ -1,0 +1,208 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/*
+ * Lucent Tiles. Bar tiles inherit the top bar's font and colour, and are ordinary panel buttons,
+ * so hover, pressed and open look exactly like every other button on the bar, whatever the shell
+ * theme. Nothing is painted at rest. The player card sits on album art, so its ink is white on both
+ * sides by design ("highlight" and "shadow" are white and black in both colour sets).
+ *
+ * Metrics: icons 16 px in the bar, 14 px in lists, 16 to 22 px in player controls; 6 px inside a
+ * tile, 12 px between groups; popover 380 px wide, 20 px card radius, 64 px cover with 12 px corners.
+ */
+
+.lt-block { spacing: 6px; }
+
+/* ---------- system tile: "CPU 12%   MEM 18%" ---------- */
+.lt-face { spacing: 12px; }
+.lt-pair { spacing: 5px; }
+
+.lt-tag {
+  font-size: 0.78em;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.lt-value {
+  font-feature-settings: "tnum";
+  font-weight: 600;
+}
+
+/* room for "100%" so the tile doesn't twitch between 9% and 10% */
+.lt-pair .lt-value { min-width: 2.6em; text-align: right; }
+
+/* something hit its limit / a build failed */
+.lt-alarm { spacing: 6px; }
+.lt-alarm .lt-value,
+.lt-alarm .lt-tag { color: @{rgb:alert}; }
+.lt-alarm-icon { icon-size: 14px; color: @{rgb:alert}; }
+
+/* ---------- activity tile ---------- */
+.lt-face.lt-activity { spacing: 6px; }
+.lt-activity-icon { icon-size: 14px; }
+.lt-dim .lt-value,
+.lt-dim .lt-activity-icon { color: @{rgba:highlight,0.55}; }
+
+/* ---------- tray drawer ---------- */
+.lt-drawer-icon { icon-size: 16px; }
+.lt-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  margin: 3px 0 0 0;
+  background-color: -st-accent-color;
+}
+.lt-drawer-row { spacing: 0; }
+/* the strip adds nothing of its own: tray icons are plain panel buttons, same size and
+   highlight as every other tile */
+.lt-drawer-strip { padding: 0; border: none; }
+
+/* ---------- clock quote ---------- */
+.lt-quote { spacing: 10px; }
+.lt-quote-text { font-style: italic; }
+.lt-quote-by { font-size: 0.88em; }
+
+/* ---------- activity popover (player card) ---------- */
+/* Blur my Shell, when present, already blurs every popup menu. The theme's opaque menu background
+   would hide that, so the player gets a light tint with a hairline edge, and the card shares the
+   popover's corner radius so the edges line up. (Theme and Blur my Shell rules need !important.) */
+.popup-menu-content.lt-menu,
+.bms-popup-background-transparent .popup-menu-content.lt-menu,
+.bms-popup-surface-transparent .popup-menu-content.lt-menu {
+  padding: 0 !important;
+  border-radius: @{radius.md}px !important;
+  background: @{rgba:shadow,0.28} !important;
+  border: 1px solid @{rgba:highlight,0.10} !important;
+  box-shadow: 0 12px 32px @{rgba:shadow,0.35} !important;
+}
+.lt-pop { width: 380px; spacing: 0; }
+
+/* the card is the top of the glass: art blended in at about 60 % (media.js BG_OPACITY) */
+.lt-card { border-radius: @{radius.md}px; }
+.lt-card-plain { background-color: @{rgba:highlight,0.04}; }
+.lt-card-bg, .lt-card-scrim { border-radius: @{radius.md}px; }
+.lt-card-bg { background-size: cover; }
+.lt-card-art .lt-card-scrim {
+  background-gradient-direction: vertical;
+  background-gradient-start: @{rgba:shadow,0.18};
+  background-gradient-end: @{rgba:shadow,0.48};
+}
+.lt-card-blur .lt-card-scrim {
+  background-gradient-direction: vertical;
+  background-gradient-start: @{rgba:shadow,0.12};
+  background-gradient-end: @{rgba:shadow,0.40};
+}
+.lt-card-content { padding: 20px 20px 14px; spacing: 8px; }
+
+/* header: 64 px cover, title over artist */
+.lt-card-head { spacing: 14px; }
+.lt-cover {
+  width: 64px;
+  height: 64px;
+  border-radius: @{radius.sm}px;
+  background-color: @{rgba:highlight,0.12};
+  box-shadow: 0 4px 14px @{rgba:shadow,0.40};
+}
+.lt-cover-img {
+  border-radius: @{radius.sm}px;
+  background-size: cover;
+}
+.lt-cover-icon { icon-size: 34px; }
+.lt-info { spacing: 2px; }
+.lt-title { font-weight: 700; font-size: 1.14em; color: @{rgb:highlight}; text-shadow: 0 1px 3px @{rgba:shadow,0.45}; }
+.lt-sub { font-size: 0.92em; font-weight: 500; color: @{rgba:highlight,0.72}; text-shadow: 0 1px 3px @{rgba:shadow,0.45}; }
+
+/* the visualiser draws 10 px in from each end: GNOME's input mapping must match */
+.lt-progress { spacing: 0; padding: 2px 0 0; }
+.lt-wave { height: 38px; -slider-handle-radius: 10px; }
+.lt-times { padding: 0 6px; }
+.lt-time {
+  font-size: 0.8em;
+  font-feature-settings: "tnum";
+  color: @{rgba:highlight,0.75};
+}
+.lt-time-btn { padding: 0; border-radius: 4px; }
+.lt-time-btn:hover .lt-time { color: @{rgb:highlight}; }
+
+/* controls: exact circles, mirror-symmetric around play:
+     side 36 · skip 44 · play 52 · skip 44 · side 36, 14 px apart.
+   width = height with zero padding (St adds padding outside width/height, and theme button
+   padding would turn a circle into a pill), radius = half the side. */
+.lt-controls { spacing: 14px; padding: 0; }
+.lt-mbtn {
+  border-radius: 999px;
+  color: @{rgb:highlight};
+  transition-duration: 120ms;
+}
+.lt-mbtn StIcon { icon-size: 18px; }
+.lt-mbtn-circle,
+.lt-mbtn-side { padding: 0; border: none; margin: 0; }
+.lt-mbtn-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background-color: @{rgba:highlight,0.14};
+}
+.lt-mbtn-circle:hover { background-color: @{rgba:highlight,0.22}; }
+.lt-mbtn-circle:active { background-color: @{rgba:highlight,0.30}; }
+.lt-mbtn-circle.lt-mbtn-play {
+  width: 52px;
+  height: 52px;
+  border-radius: 26px;
+  color: @{rgb:media-ink};
+  background-color: @{rgba:highlight,0.94};
+  box-shadow: 0 3px 10px @{rgba:shadow,0.28};
+}
+.lt-mbtn-circle.lt-mbtn-play:hover { background-color: @{rgb:highlight}; }
+.lt-mbtn-circle.lt-mbtn-play:active { background-color: @{rgba:highlight,0.80}; }
+.lt-mbtn-play StIcon { icon-size: 22px; }
+.lt-mbtn-side { width: 36px; height: 36px; border-radius: 18px; }
+.lt-mbtn-side StIcon { icon-size: 16px; }
+.lt-mbtn-side:hover { background-color: @{rgba:highlight,0.12}; }
+.lt-mbtn-side:checked { color: -st-accent-color; }
+.lt-mbtn-small { padding: 7px; color: @{rgba:highlight,0.85}; }
+.lt-mbtn-small StIcon { icon-size: 15px; }
+.lt-mbtn-small:hover { background-color: @{rgba:highlight,0.12}; }
+
+.lt-others { spacing: 2px; padding: 6px 6px 0; }
+.lt-row {
+  spacing: 10px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  transition-duration: 120ms;
+}
+.lt-row:hover { background-color: @{rgba:highlight,0.08}; }
+.lt-row-art {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background-color: @{rgba:highlight,0.10};
+  background-size: cover;
+}
+.lt-row-title { font-weight: 600; }
+.lt-row-sub { font-size: 0.85em; color: @{rgba:highlight,0.6}; }
+
+.lt-section {
+  font-size: 0.72em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: @{rgba:highlight,0.55};
+  padding: 10px 18px 2px;
+}
+.lt-acts { spacing: 2px; padding: 0 6px 8px; }
+.lt-act { spacing: 9px; padding: 5px 12px; }
+.lt-act-icon { icon-size: 14px; }
+.lt-act-text { font-feature-settings: "tnum"; }
+.lt-empty { padding: 18px; color: @{rgba:highlight,0.5}; text-align: center; }
+
+/* =====================================================================
+ * Tray icons (AppIndicator): some themes pad these 16 px plus a 4 px box
+ * margin each side, so their hover box is wider than every other top-bar
+ * button (12 px). Bring them in line with the rest.
+ * ===================================================================== */
+#panel Gjs_appindicatorsupport_rgcjonas_gmail_com_indicatorStatusIcon_IndicatorStatusIcon.panel-button,
+#panel Gjs_appindicatorsupport_rgcjonas_gmail_com_indicatorStatusIcon_AppIndicatorsIndicatorStatusIcon.panel-button {
+  -natural-hpadding: 12px !important;
+  -minimum-hpadding: 12px !important;
+}
+#panel .panel-button .appindicator-trayicons-box {
+  margin: 0 !important;
+}

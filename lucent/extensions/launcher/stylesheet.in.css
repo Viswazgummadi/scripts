@@ -1,0 +1,154 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/*
+ * Lucent Launcher. The glass itself (blur, tint, saturation, rounded cut) is drawn by
+ * ui/glass.js; these rules give it type, edges, shadow and layout.
+ *
+ * The panel's root carries .sl-dark or .sl-light (ui/panel.js decides). "fill" is the ink of a
+ * side: white on the dark side, black on the light one, used at the opacity a role needs.
+ */
+
+.sl-root { font-family: "Adwaita Sans", sans-serif; }
+
+/* ---- geometry (no colour) ----------------------------------------------------------------------- */
+.sl-shadow, .sl-hairline, .sl-rim { border-radius: @{radius.lg}px; }
+
+.sl-bar { height: 56px; padding: 0 14px 0 20px; spacing: 10px; }
+.sl-search-icon { icon-size: 20px; }
+.sl-entry,
+.sl-entry:focus,
+.sl-entry:hover {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  min-height: 0;
+  font-size: 22px;
+  font-weight: 300;
+}
+.sl-entry StLabel.hint-text { font-weight: 300; }
+.sl-ghost { font-size: 22px; font-weight: 300; }
+.sl-chip { font-size: 13px; font-weight: 600; border-radius: 7px; padding: 3px 9px; }
+.sl-toast { font-size: 12px; font-weight: 500; padding: 0 6px; }
+.sl-cats { spacing: 2px; }
+.sl-cat { border-radius: 8px; padding: 6px; background-color: transparent; transition-duration: 120ms; }
+.sl-cat-icon { icon-size: 16px; }
+
+.sl-sep { height: 1px; margin: 0 14px; }
+.sl-vsep { width: 1px; margin: 10px 0 12px 0; }
+
+.sl-list-scroll { padding: 6px 0 10px 8px; }
+.sl-list { padding-right: 6px; }
+.sl-highlight { border-radius: 9px; margin-right: 6px; background-color: -st-accent-color; }
+
+.sl-header { height: 24px; padding: 6px 10px 1px 10px; }
+.sl-header-label { font-size: 11.5px; font-weight: 600; }
+.sl-more { font-size: 11px; font-weight: 500; padding: 0 4px; border-radius: 5px; background-color: transparent; }
+
+.sl-row { height: 42px; padding: 0 10px; spacing: 10px; border-radius: 9px; }
+.sl-row-icon { width: 30px; }
+.sl-title { font-size: 13.5px; font-weight: 400; }
+.sl-sub { font-size: 11px; margin-top: 1px; }
+
+.sl-top { height: 58px; }
+.sl-top .sl-row-icon { width: 44px; }
+.sl-top .sl-title { font-size: 15px; font-weight: 600; }
+.sl-big .sl-title { font-size: 18px; font-weight: 500; }
+.sl-top.sl-big .sl-title { font-size: 22px; font-weight: 400; }
+
+.sl-preview { padding: 0; }
+.sl-preview-content { padding: 22px 22px 8px 22px; spacing: 6px; }
+.sl-pv-visual { padding: 4px 0 10px 0; }
+.sl-pv-window { padding: 2px 0 12px 0; }
+.sl-pv-title { font-size: 17px; font-weight: 600; }
+.sl-pv-kind { font-size: 12px; }
+.sl-pv-desc { font-size: 12.5px; padding-top: 6px; }
+.sl-pv-expr { font-size: 14px; }
+.sl-pv-big { font-size: 34px; font-weight: 300; padding-bottom: 6px; }
+.sl-pv-foot { font-size: 11px; padding-top: 8px; }
+.sl-pv-swatch { width: 120px; height: 120px; border-radius: 22px; }
+
+.sl-pv-info { margin-top: 14px; padding-top: 12px; spacing: 5px; }
+.sl-pv-row { spacing: 12px; }
+.sl-pv-key { font-size: 12px; width: 84px; text-align: right; }
+.sl-pv-val { font-size: 12px; }
+
+.sl-pv-text-box, .sl-pv-code-box, .sl-pv-snippet-box, .sl-pv-def-box {
+  margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+}
+.sl-pv-code { font-family: "Adwaita Mono", monospace; font-size: 11px; }
+.sl-pv-text, .sl-pv-snippet, .sl-pv-def { font-size: 12.5px; }
+.sl-pv-def-box { background-color: transparent; padding: 4px 2px; }
+
+.sl-hints { padding: 8px 12px 12px 12px; spacing: 14px; }
+.sl-hint { spacing: 5px; }
+.sl-hint-key { font-size: 10.5px; font-weight: 600; border-radius: 5px; padding: 1px 5px; }
+.sl-hint-label { font-size: 11px; }
+
+/* ---- the shell of the panel: these differ in strength, not just in ink ---------------------------- */
+.sl-dark .sl-shadow { box-shadow: 0 24px 72px 0 @{rgba:shadow,0.48}; }
+.sl-dark .sl-hairline { box-shadow: 0 0 0 1px @{rgba:shadow,0.55}; }
+.sl-dark .sl-rim {
+  border: 1px solid @{rgba:highlight,0.13};
+  box-shadow: inset 0 1px 0 0 @{rgba:highlight,0.09};
+}
+.sl-dark .sl-pv-text-box, .sl-dark .sl-pv-code-box, .sl-dark .sl-pv-snippet-box { background-color: @{rgba:shadow,0.22}; }
+
+.sl-light .sl-shadow { box-shadow: 0 22px 64px 0 @{rgba:shadow,0.22}; }
+.sl-light .sl-hairline { box-shadow: 0 0 0 1px @{rgba:shadow,0.14}; }
+.sl-light .sl-rim {
+  border: 1px solid @{rgba:highlight,0.65};
+  box-shadow: inset 0 1px 0 0 @{rgba:highlight,0.5};
+}
+.sl-light .sl-pv-text-box, .sl-light .sl-pv-code-box, .sl-light .sl-pv-snippet-box { background-color: @{rgba:shadow,0.05}; }
+
+/* ---- ink ---------------------------------------------------------------------------------------- */
+/* @sides */
+.sl-@side .sl-shadow { background-color: @{rgb:backdrop}; }
+
+.sl-@side .sl-search-icon { color: @{rgba:fill,0.55}; }
+.sl-@side .sl-entry,
+.sl-@side .sl-entry:focus,
+.sl-@side .sl-entry:hover {
+  color: @{rgba:fill,0.95};
+  caret-color: @{rgba:fill,0.9};
+  selection-background-color: @{rgba:fill,0.24};
+  selected-color: @{rgb:fill};
+}
+.sl-@side .sl-entry StLabel.hint-text { color: @{rgba:fill,0.36}; }
+.sl-@side .sl-ghost { color: @{rgba:fill,0.36}; }
+.sl-@side .sl-toast { color: @{rgba:fill,0.55}; }
+.sl-@side .sl-cat { color: @{rgba:fill,0.5}; }
+.sl-@side .sl-cat:hover { background-color: @{rgba:fill,0.1}; color: @{rgba:fill,0.85}; }
+.sl-@side .sl-cat:checked { background-color: @{rgba:fill,0.16}; color: @{rgb:fill}; }
+
+.sl-@side .sl-sep { background-color: @{rgba:fill,0.09}; }
+.sl-@side .sl-vsep { background-color: @{rgba:fill,0.08}; }
+
+.sl-@side .sl-header-label { color: @{rgba:fill,0.46}; }
+.sl-@side .sl-more { color: @{rgba:fill,0.5}; }
+.sl-@side .sl-more:hover { color: @{rgba:fill,0.9}; background-color: @{rgba:fill,0.08}; }
+.sl-@side .sl-title { color: @{rgba:fill,0.92}; }
+.sl-@side .sl-sub { color: @{rgba:fill,0.5}; }
+.sl-@side .sl-swatch { border: 1px solid @{rgba:fill,0.25}; }
+
+.sl-@side .sl-pv-title { color: @{rgba:fill,0.95}; }
+.sl-@side .sl-pv-kind { color: @{rgba:fill,0.5}; }
+.sl-@side .sl-pv-desc { color: @{rgba:fill,0.72}; }
+.sl-@side .sl-pv-expr { color: @{rgba:fill,0.55}; }
+.sl-@side .sl-pv-big { color: @{rgb:fill}; }
+.sl-@side .sl-pv-foot { color: @{rgba:fill,0.4}; }
+.sl-@side .sl-pv-swatch { border: 1px solid @{rgba:fill,0.25}; }
+.sl-@side .sl-pv-info { border-top: 1px solid @{rgba:fill,0.08}; }
+.sl-@side .sl-pv-key { color: @{rgba:fill,0.45}; }
+.sl-@side .sl-pv-val { color: @{rgba:fill,0.85}; }
+.sl-@side .sl-pv-code { color: @{rgba:fill,0.82}; }
+.sl-@side .sl-pv-text, .sl-@side .sl-pv-snippet, .sl-@side .sl-pv-def { color: @{rgba:fill,0.85}; }
+.sl-@side .sl-hint-key { color: @{rgba:fill,0.62}; background-color: @{rgba:fill,0.08}; }
+.sl-@side .sl-hint-label { color: @{rgba:fill,0.45}; }
+/* @end */
+
+/* Text on the accent-coloured selection and on coloured chips is the same on both sides. */
+.sl-root .sl-chip { color: @{rgb:on-accent}; }
+.sl-root .sl-row:selected .sl-title { color: @{rgb:on-accent}; }
+.sl-root .sl-row:selected .sl-sub { color: @{rgba:on-accent,0.82}; }

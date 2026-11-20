@@ -1,0 +1,10 @@
+{
+  "uuid": "lucent-dock@viswazgummadi.github.io",
+  "name": "Lucent Dock",
+  "description": "Magnification for Dash to Dock (and Ubuntu Dock): icons swell smoothly under the pointer and their neighbours make room. It only moves and scales the dock's own icons, so everything the dock does keeps working; without a dock it does nothing.",
+  "shell-version": ["51"],
+  "url": "https://github.com/Viswazgummadi/lucent",
+  "settings-schema": "org.gnome.shell.extensions.lucent-dock",
+  "gettext-domain": "lucent-dock",
+  "version-name": "0.1.0"
+}

@@ -1,0 +1,178 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/*
+ * Lucent Glass: readable materials on top of blurred shell surfaces.
+ *
+ * Every rule hangs off a class that extension.js puts on the UI group or the top bar, so each
+ * part can be switched off, and so these selectors outrank Blur my Shell's "transparent" rules
+ * by specificity instead of by load order.
+ *
+ * A surface gets the dark material when the theme draws light text on it and the light material
+ * when it draws dark text; extension.js looks at the text and picks (classes ending in -dark or
+ * -light). The opacities are not chosen by eye: tools/lucent.py checks on every build that, with
+ * the material over the worst possible window behind it, titles reach 7:1 and body text 4.5:1.
+ */
+
+/* @sides */
+/* Menus: right-click menus, indicators, the logo menu */
+.lucent-menus-@side .popup-menu-boxpointer .popup-menu-content {
+  background: @{rgba:surface,material.popover} !important;
+  border: 1px solid @{rgba:stroke,material.hairline} !important;
+  box-shadow: @{elevation.2} !important;
+}
+.lucent-menus-@side .popup-menu-boxpointer .popup-sub-menu {
+  background: @{rgba:fill,material.card} !important;
+  border-color: @{rgba:stroke,material.hairline} !important;
+}
+
+/* Quick Settings, and the lists that unfold inside it. (Its box is also a .popup-menu-content:
+   the second selector outranks the menu rule above when the two sides differ.) */
+.lucent-quick-@side .popup-menu-boxpointer .quick-settings,
+.lucent-quick-@side .popup-menu-boxpointer .popup-menu-content.quick-settings {
+  background: @{rgba:surface,material.popover} !important;
+  border: 1px solid @{rgba:stroke,material.hairline} !important;
+  box-shadow: @{elevation.2} !important;
+}
+.lucent-quick-@side .popup-menu-boxpointer .quick-toggle-menu {
+  background: @{rgba:fill,material.card} !important;
+  border-color: @{rgba:stroke,material.hairline} !important;
+}
+
+/* Calendar and notification list */
+.lucent-date-@side .popup-menu-boxpointer .popup-menu-content.datemenu-popover {
+  background: @{rgba:surface,material.popover} !important;
+  border: 1px solid @{rgba:stroke,material.hairline} !important;
+  box-shadow: @{elevation.2} !important;
+}
+.lucent-date-@side .datemenu-popover .message-list .message {
+  background: @{rgba:fill,material.card} !important;
+  border: 1px solid @{rgba:stroke,material.hairline} !important;
+}
+.lucent-date-@side .datemenu-popover .message-list .message:hover {
+  background: @{rgba:fill,material.card-hover} !important;
+}
+/* All text in the calendar is set here, so it cannot disagree with the material. */
+.lucent-date-@side .datemenu-popover .message-title,
+.lucent-date-@side .datemenu-popover .message-group-title,
+.lucent-date-@side .datemenu-popover .datemenu-today-button .date-label,
+.lucent-date-@side .datemenu-popover .calendar-month-label,
+.lucent-date-@side .datemenu-popover .events-title,
+.lucent-date-@side .datemenu-popover .event-summary,
+.lucent-date-@side .datemenu-popover .world-clocks-header,
+.lucent-date-@side .datemenu-popover .world-clocks-time,
+.lucent-date-@side .datemenu-popover .weather-header,
+.lucent-date-@side .datemenu-popover .weather-forecast-temp {
+  color: @{rgb:text-strong} !important;
+}
+.lucent-date-@side .datemenu-popover .message,
+.lucent-date-@side .datemenu-popover .message-content,
+.lucent-date-@side .datemenu-popover .url-highlighter,
+.lucent-date-@side .datemenu-popover .message-source-title,
+.lucent-date-@side .datemenu-popover .event-time,
+.lucent-date-@side .datemenu-popover .message-list-placeholder,
+.lucent-date-@side .datemenu-popover .datemenu-today-button .day-label,
+.lucent-date-@side .datemenu-popover .calendar-day-heading,
+.lucent-date-@side .datemenu-popover .calendar-week-number,
+.lucent-date-@side .datemenu-popover .calendar .calendar-day,
+.lucent-date-@side .datemenu-popover .events-button,
+.lucent-date-@side .datemenu-popover .world-clocks-button,
+.lucent-date-@side .datemenu-popover .world-clocks-timezone,
+.lucent-date-@side .datemenu-popover .weather-button,
+.lucent-date-@side .datemenu-popover .weather-forecast-time {
+  color: @{rgb:text-body} !important;
+}
+.lucent-date-@side .datemenu-popover .calendar .calendar-day.calendar-other-month {
+  color: @{rgb:text-dim} !important;
+}
+.lucent-date-@side .datemenu-popover .calendar .calendar-day.calendar-today,
+.lucent-date-@side .datemenu-popover .calendar .calendar-day:selected {
+  color: @{rgb:on-accent} !important;
+}
+
+/* Notification banners */
+.lucent-banner-@side .message.notification-banner {
+  background: @{rgba:surface,material.popover} !important;
+  border: 1px solid @{rgba:stroke,material.hairline} !important;
+  box-shadow: @{elevation.2} !important;
+  color: @{rgb:text-body} !important;
+}
+.lucent-banner-@side .message.notification-banner:hover {
+  background: @{rgba:surface,material.popover-hover} !important;
+}
+.lucent-banner-@side .notification-banner .message-title {
+  color: @{rgb:text-strong} !important;
+}
+.lucent-banner-@side .notification-banner .message-content,
+.lucent-banner-@side .notification-banner .url-highlighter,
+.lucent-banner-@side .notification-banner .message-source-title,
+.lucent-banner-@side .notification-banner .event-time {
+  color: @{rgb:text-body} !important;
+}
+
+/* Shell pop-ups: the window and workspace switchers, the volume and brightness display, the resize
+   pop-up, dialogs, the run dialog and app folders. Blur my Shell makes them fully transparent; they
+   get the menu material. The doubled class outranks its rules whichever stylesheet loads last. */
+.lucent-menus-@side.lucent-menus-@side .switcher-list,
+.lucent-menus-@side.lucent-menus-@side .workspace-switcher,
+.lucent-menus-@side.lucent-menus-@side .osd-window,
+.lucent-menus-@side.lucent-menus-@side .resize-popup,
+.lucent-menus-@side.lucent-menus-@side .modal-dialog,
+.lucent-menus-@side.lucent-menus-@side .run-dialog,
+.lucent-menus-@side.lucent-menus-@side .app-folder-dialog {
+  background: @{rgba:surface,material.popover} !important;
+  border: 1px solid @{rgba:stroke,material.hairline} !important;
+  box-shadow: @{elevation.3} !important;
+}
+/* @end */
+
+/* ---------- Top bar ---------- */
+/*
+ * A clear glass bar shows whatever the wallpaper has behind it. White text over a bright area
+ * measured 2.0:1; with the medium smoke the same spot is 5.9:1. The bar's text is set to white
+ * whenever there is smoke, so the pair stays readable in the light style too.
+ */
+#panel.lucent-smoke-light,
+#panel.transparent-panel.lucent-smoke-light {
+  background: @{rgba:smoke,material.smoke-light} !important;
+}
+#panel.lucent-smoke-medium,
+#panel.transparent-panel.lucent-smoke-medium {
+  background: @{rgba:smoke,material.smoke} !important;
+}
+#panel.lucent-smoke-heavy,
+#panel.transparent-panel.lucent-smoke-heavy {
+  background: @{rgba:smoke,material.smoke-heavy} !important;
+}
+#panel.lucent-smoke-light .panel-button,
+#panel.lucent-smoke-medium .panel-button,
+#panel.lucent-smoke-heavy .panel-button {
+  color: @{rgb:text};
+}
+#panel.lucent-bar-shadow .panel-button,
+#panel.lucent-bar-shadow .panel-button StLabel {
+  text-shadow: @{elevation.1};
+}
+#panel.lucent-bar-shadow .panel-button StIcon {
+  icon-shadow: @{elevation.1};
+}
+
+/* ---------- Overview search field ---------- */
+/* Blur my Shell makes it fully transparent, so it almost disappears. The overview always lies over
+   a dimmed, blurred wallpaper, so this is white glass on both sides. */
+.lucent-overview #overviewGroup .search-entry,
+.lucent-overview.overview-components-transparent #overviewGroup .search-entry {
+  background-color: @{rgba:highlight,0.12} !important;
+  border: 1px solid @{rgba:highlight,0.16} !important;
+  box-shadow: @{elevation.1} !important;
+  color: @{rgb:highlight} !important;
+}
+.lucent-overview #overviewGroup .search-entry:focus,
+.lucent-overview.overview-components-transparent #overviewGroup .search-entry:focus {
+  background-color: @{rgba:highlight,0.18} !important;
+  border-color: @{rgba:highlight,0.24} !important;
+}
+.lucent-overview #overviewGroup .search-entry .search-entry-icon,
+.lucent-overview #overviewGroup .search-entry StLabel.hint-text,
+.lucent-overview.overview-components-transparent #overviewGroup .search-entry .search-entry-icon,
+.lucent-overview.overview-components-transparent #overviewGroup .search-entry StLabel.hint-text {
+  color: @{rgba:highlight,0.7} !important;
+}

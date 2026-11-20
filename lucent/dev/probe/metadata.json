@@ -1,0 +1,8 @@
+{
+  "uuid": "lucent-probe@viswazgummadi.github.io",
+  "name": "Lucent Probe",
+  "description": "Development tool for Lucent, not for daily use. Reads commands from ~/.cache/lucent-probe/cmd: load an extension from a folder into the running shell, show a shell surface, take a screenshot, move the pointer, try a stylesheet.",
+  "shell-version": ["51"],
+  "url": "https://github.com/Viswazgummadi/lucent",
+  "version-name": "dev"
+}

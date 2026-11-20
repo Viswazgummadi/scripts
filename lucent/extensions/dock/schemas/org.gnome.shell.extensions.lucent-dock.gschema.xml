@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="lucent-dock">
+  <schema id="org.gnome.shell.extensions.lucent-dock" path="/org/gnome/shell/extensions/lucent-dock/">
+    <key name="magnification" type="d">
+      <default>1.35</default>
+      <range min="1.0" max="2.5"/>
+      <summary>Magnification</summary>
+      <description>How large the icon under the pointer becomes, as a multiple of its normal size. 1 turns magnification off.</description>
+    </key>
+    <key name="reach" type="d">
+      <default>2.5</default>
+      <range min="1.0" max="5.0"/>
+      <summary>Reach</summary>
+      <description>How far the swell spreads to either side, in icons.</description>
+    </key>
+    <key name="settle-time" type="i">
+      <default>200</default>
+      <range min="0" max="300"/>
+      <summary>Settle time</summary>
+      <description>Milliseconds the icons take to return to their size when the pointer leaves the dock. At most 300, so they are back before a hiding dock starts to slide away.</description>
+    </key>
+  </schema>
+</schemalist>

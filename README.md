@@ -26,3 +26,19 @@ See `setup.sh --help`.
 - Machine- or project-specific settings go in `~/.zshrc.local` (created from `files/zshrc.local.example`,
   never committed).
 - Re-running is safe.
+
+## lucent/
+
+Lucent: small GNOME Shell 51 extensions for a glass desktop (launcher, readable glass, top-bar tiles,
+dock magnification for Dash to Dock, a dissolve close effect, a hot corner). Details and pictures in
+[lucent/README.md](lucent/README.md).
+
+```sh
+git clone https://github.com/Viswazgummadi/scripts.git ~/scripts
+cd ~/scripts/lucent
+./install.sh                         # all six; or: ./install.sh dock glass
+```
+
+Then log out and back in, and switch them on in the **Extensions** app (or
+`gnome-extensions enable lucent-dock@viswazgummadi.github.io`). Remove with `./install.sh --remove`.
+Unlike `terminal/`, keep this clone if you want to pull updates later.

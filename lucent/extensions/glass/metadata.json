@@ -1,0 +1,10 @@
+{
+  "uuid": "lucent-glass@viswazgummadi.github.io",
+  "name": "Lucent Glass",
+  "description": "Keeps glass readable. Menus, the calendar and notifications get a tint whose opacity is calculated so their text passes WCAG AA over any window, and the top bar gets a light smoke so white text stays legible over a bright wallpaper. Made to sit on top of Blur my Shell; works without it too.",
+  "shell-version": ["51"],
+  "url": "https://github.com/Viswazgummadi/lucent",
+  "settings-schema": "org.gnome.shell.extensions.lucent-glass",
+  "gettext-domain": "lucent-glass",
+  "version-name": "0.1.0"
+}
