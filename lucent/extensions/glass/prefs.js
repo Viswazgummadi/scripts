@@ -49,7 +49,7 @@ export default class LucentGlassPreferences extends ExtensionPreferences {
         menus.add(popovers);
         const clear = new Adw.SwitchRow({
             title: _('See-through menus'),
-            subtitle: _('Quick Settings, the calendar and the top-bar menus at 70%, like a translucent terminal; harder to read over a bright window'),
+            subtitle: _('Quick Settings, the calendar and the top-bar menus as see-through as a translucent terminal; harder to read over a bright window'),
         });
         settings.bind('clear-menus', clear, 'active', Gio.SettingsBindFlags.DEFAULT);
         settings.bind('popovers', clear, 'sensitive', Gio.SettingsBindFlags.GET);

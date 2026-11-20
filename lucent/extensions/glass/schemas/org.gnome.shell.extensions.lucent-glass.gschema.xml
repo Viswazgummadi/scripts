@@ -31,7 +31,7 @@
     <key name="clear-menus" type="b">
       <default>false</default>
       <summary>See-through menus</summary>
-      <description>The top-bar menus (Quick Settings, the calendar, the small menus) use a lighter tint, 70 percent like a translucent terminal, so more of what is behind shows through. Text is harder to read over a bright window behind them.</description>
+      <description>The top-bar menus (Quick Settings, the calendar, the small menus) use a lighter tint, as see-through as a 70 percent translucent terminal, so more of what is behind shows through. Text is harder to read over a bright window behind them.</description>
     </key>
     <key name="popovers" type="b">
       <default>true</default>
